@@ -689,7 +689,6 @@ dialog menu {
 
 
 .tifinfo{display:grid;gap:6px;margin:0 0 12px;font-size:13px;color:var(--mu)}.tifinfo p{margin:0}.tifinfo b{color:var(--tx)}
-.tifrow{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:13px;color:var(--mu);margin:6px 0}
 </style>
 </head>
 <body>
@@ -700,9 +699,7 @@ dialog menu {
     <span>Community Site Contribution · NASA Space Apps</span>
   </div>
   <div class="nav-actions">
-    <span id="userInfo" style="color:var(--mu);font-size:13px"></span>
     <a class="btn" href="web_test.html">← Back to Analyzer</a>
-    <button class="btn" id="outBtn">Sign out</button>
   </div>
 </header>
 
@@ -839,30 +836,24 @@ dialog menu {
 </dialog>
 
 <script>
-const $=id=>document.getElementById(id),C='nasa_analog_catalog',S='nasa_session';
+const $=id=>document.getElementById(id);
 const cf=$('cf'),siteName=$('siteName'),country=$('country'),lat=$('lat'),lng=$('lng'),
       hum=$('hum'),pop=$('pop'),
       terrain=$('terrain'),feat=$('feat'),contributor=$('contributor'),refUrl=$('refUrl'),
-      coordTag=$('coordTag'),gal=$('gal'),total=$('total'),userInfo=$('userInfo'),outBtn=$('outBtn'),
+      coordTag=$('coordTag'),gal=$('gal'),total=$('total'),
       previewBox=$('previewBox'),pBody=$('pBody'),pTerr=$('pTerr'),pName=$('pName'),
       pMeta=$('pMeta'),pArc=$('pArc'),pScore=$('pScore'),msgDlg=$('msgDlg'),msgT=$('msgT'),msgB=$('msgB');
 
-// ===== Kết nối Node.js backend =====
-// Node.js server (chạy local: npm start). Dùng cùng hostname với trang web để cookie phiên được gửi kèm.
+// ===== Kết nối PHP backend =====
+// PHP chạy ở cổng 8000 (php -S 127.0.0.1:8000).
 const HOST='';
-const API={auth:HOST+'api/auth',sites:HOST+'api/contribute'};   // api/contribute <-> bảng moon_base_sites, mars_outpost_sites, contributions (database `railway`)
+const API={sites:HOST+'contribute.php'};   // contribute.php <-> database `contribute`
 async function api(url,opt){
-  const r=await fetch(url,{credentials:'include',headers:{'Content-Type':'application/json'},...opt});
-  const d=await r.json().catch(()=>({error:`The server did not answer correctly (HTTP ${r.status}). Is the server running?`}));
-  if(r.status===401){window.location.href='login.html';throw new Error('login')}
+  const r=await fetch(url,{headers:{'Content-Type':'application/json'},...opt});
+  const d=await r.json().catch(()=>({error:`PHP did not answer correctly (HTTP ${r.status}). Is the PHP server running on port 8000?`}));
   if(!r.ok)throw new Error(d.error||`Request failed (${r.status})`);
   return d;
 }
-
-outBtn.onclick=async()=>{
-  try{await fetch(API.auth+'?action=logout',{credentials:'include'})}catch{}
-  window.location.href='login.html';
-};
 
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const col=b=>b==='Moon'?'#8cc4e8':'#e0795a';
@@ -877,24 +868,6 @@ const P={
 
 let map,pickMarker=null,cat=[],catFilter='all';
 
-function scoreSite(d){
-  const moon=d.target==='Moon',t=(d.features+' '+d.terrainType).toLowerCase(),has=(...w)=>w.some(x=>t.includes(x));
-  let s=66;
-  if(moon){if(has('crater','impact','breccia'))s+=14;if(has('lava tube','cave'))s+=16;if(has('basalt','regolith'))s+=12}
-  else{if(has('hyperarid','desert','uv'))s+=14;if(has('permafrost','ice','brine'))s+=13;if(has('perchlorate','oxide','iron'))s+=12}
-  if(!isNaN(d.humidity)){
-    if(d.humidity<=20)s+=8;
-    else if(d.humidity<=45)s+=3;
-    else if(d.humidity>65)s-=8;
-  }
-  if(!isNaN(d.popDensity)){
-    if(d.popDensity<=1)s+=8;
-    else if(d.popDensity<=15)s+=4;
-    else if(d.popDensity>100)s-=10;
-  }
-  return Math.min(96,Math.max(45,s));
-}
-
 function pin(la,ln,title,body,terr){
   if(isNaN(la)||isNaN(ln))return;
   const c=col(body);
@@ -902,22 +875,18 @@ function pin(la,ln,title,body,terr){
    .bindPopup(`<strong>${esc(title)}</strong><br><span style="color:${c}">${body}</span> · <span style="color:#8d98a8">${esc(terr)}</span>`);
 }
 
-// 5 địa điểm mẫu: web_test.html lưu chúng vào database của tài khoản ở lần đăng nhập đầu;
+// 5 địa điểm mẫu: web_test.html lưu chúng vào database ở lần mở đầu tiên;
 // nếu chưa có thì chỉ hiển thị tạm ở đây (không ghi vào database)
 const SAMPLES=Object.values(P).map(p=>({...p,score:p.target==='Mars'?94:92,timestamp:Date.now()}));
 const NUMK=['latitude','longitude','humidity','popDensity','temp','wind','windDir','pressure','elevation'];
 const fromServer=x=>{NUMK.forEach(k=>{if(x[k]===null||x[k]===undefined)x[k]=NaN});return x};
 const sameName=(a,b)=>(a.locationName||'').trim().toLowerCase()===(b.locationName||'').trim().toLowerCase();
 
-// Tải từ database `railway` (moon_base_sites + mars_outpost_sites + contributions) của CHÍNH tài khoản đang đăng nhập
+// Tải từ database `contribute` (view all_sites = moon base + mars outpost + địa điểm đã đóng góp)
 async function load(){
-  const me=await api(API.auth+'?action=me');
-  if(!me.loggedIn){window.location.href='login.html';return}
-  userInfo.textContent=me.name;
-  contributor.value=me.name;
   const d=await api(API.sites);
   const mine=d.sites.map(fromServer);
-  cat=[...mine,...SAMPLES.filter(x=>!mine.some(m=>sameName(m,x)))];   // địa điểm của tài khoản trước, rồi tới preset còn thiếu
+  cat=[...mine,...SAMPLES.filter(x=>!mine.some(m=>sameName(m,x)))];   // địa điểm đã lưu trước, rồi tới preset còn thiếu
   cat.forEach(s=>pin(s.latitude,s.longitude,s.locationName,s.target,s.terrainType));
   draw();
 }
@@ -998,7 +967,7 @@ cf.onsubmit=async e=>{
   submitBtn.disabled=true;
   let entry;
   try{
-    // Gửi dữ liệu form sang api/contribute -> server ghi vào bảng `contributions` của database `railway`
+    // Gửi dữ liệu form sang contribute.php -> PHP ghi vào bảng contributions của database `contribute`
     const d=await api(API.sites,{method:'POST',body:JSON.stringify({
       target:cf.t.value,
       siteName:siteName.value.trim(),
@@ -1015,7 +984,7 @@ cf.onsubmit=async e=>{
     entry=fromServer(d.site);
   }catch(err){
     submitBtn.disabled=false;
-    if(err.message!=='login'){msgT.textContent='Không lưu được';msgB.textContent=err.message;msgDlg.showModal()}
+    msgT.textContent='Không lưu được';msgB.textContent=err.message;msgDlg.showModal()
     return;
   }
   submitBtn.disabled=false;
@@ -1039,7 +1008,7 @@ cf.onsubmit=async e=>{
   setTimeout(()=>pArc.style.strokeDashoffset=201-201*entry.score/100,50);
 
   msgT.textContent='Site added to catalog!';
-  msgB.textContent=`"${entry.locationName}" (${entry.score}% match) has been saved to the database (${entry.target==='Moon'?'moon base':'mars outpost'}).`;
+  msgB.textContent=`"${entry.locationName}" (${entry.score}% match) has been saved to the contribute database (${entry.target==='Moon'?'moon base':'mars outpost'}).`;
   msgDlg.showModal();
 
   siteName.value='';
@@ -1048,7 +1017,7 @@ cf.onsubmit=async e=>{
   refUrl.value='';
 };
 
-load().catch(err=>{if(err.message!=='login'){msgT.textContent='Không tải được dữ liệu';msgB.textContent=err.message;msgDlg.showModal()}});
+load().catch(err=>{msgT.textContent='Không tải được dữ liệu';msgB.textContent=err.message;msgDlg.showModal()});
 </script>
 <script>(()=>{const L={lat:[-90,90,'°'],lng:[-180,180,'°'],hum:[0,100,'%'],pop:[0,50000,'/km²']};
 document.head.insertAdjacentHTML('beforeend','<style>input.num:invalid{border-color:var(--bad);outline:1px solid var(--bad)}</style>');

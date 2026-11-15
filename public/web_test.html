@@ -831,7 +831,6 @@ dialog menu {
   <div class="nav-actions">
     <a class="btn" href="compare.html">Compare planets</a>
     <a class="btn" href="engine_modules.html">Engine &amp; Modules</a>
-    <span id="userInfo" style="color:var(--mu);font-size:13px"></span>
     <a class="btn primary" href="contribute.html">+ Contribute site</a>
     <button class="btn" id="keyBtn">Set Gemini key</button>
   </div>
@@ -1048,20 +1047,19 @@ dialog menu {
 <dialog id="msgDlg"><h3 id="msgT"></h3><p id="msgB"></p><menu><button class="btn" onclick="msgDlg.close()">OK</button></menu></dialog>
 
 <script>
-const $=id=>document.getElementById(id),K='nasa_gemini_api_key',C='nasa_analog_catalog',S='nasa_session';
+const $=id=>document.getElementById(id),K='nasa_gemini_api_key';
 const nameIn=$('name'),lat=$('lat'),lng=$('lng'),wind=$('wind'),windDir=$('windDir'),pressure=$('pressure'),elev=$('elev'),hTemp=$('hTemp'),hWind=$('hWind'),terrain=$('terrain'),feat=$('feat'),
       f=$('f'),go=$('go'),res=$('res'),chips=$('chips'),gal=$('gal'),total=$('total'),
       keyBtn=$('keyBtn'),keyDlg=$('keyDlg'),keyIn=$('keyIn'),keySave=$('keySave'),keyClr=$('keyClr'),
       msgDlg=$('msgDlg'),msgT=$('msgT'),msgB=$('msgB'),engine=$('engine'),
       rBody=$('rBody'),rTerr=$('rTerr'),rRole=$('rRole'),rName=$('rName'),rCoord=$('rCoord'),
-      arc=$('arc'),score=$('score'),report=$('report'),userInfo=$('userInfo'),outBtn=$('outBtn');
+      arc=$('arc'),score=$('score'),report=$('report');
 
 const API='';
 async function api(path,opt={}){
-  const o={credentials:'include',...opt};
-  if(opt.body)o.headers={'Content-Type':'application/json'};
-  const r=await fetch(API+path,o);
-  let d;try{d=await r.json()}catch{throw new Error(`The server did not answer correctly (HTTP ${r.status}). Is the server running?`)}
+  if(opt.body)opt.headers={'Content-Type':'application/json'};
+  const r=await fetch(API+path,opt);
+  let d;try{d=await r.json()}catch{throw new Error(`PHP did not answer correctly (HTTP ${r.status}). Is the PHP server running on port 8000?`)}
   if(!r.ok)throw new Error(d.error||`Request failed (${r.status})`);
   return d}
 const post=(path,body)=>api(path,{method:'POST',body:JSON.stringify(body)});
@@ -1180,6 +1178,31 @@ const P = {
       regolith_sim: 95, slope_deg: 8.1, rms_rough: 0.28, solar_rad: 6.8,
       sub_ice: 8, dust_conc: 290, extremophile_idx: 79, subsurface_idx: 85, ops_readiness: 94
     }
+  }
+};
+
+// ===== USER ROLES CONFIGURATION (ENGINEER / GOVERNMENT / ENTERPRISE) =====
+const ROLES = {
+  engineer: {
+    label: 'Engineer (Engineering)',
+    color: 'var(--moon)',
+    hint: '<strong>Engineer Focus:</strong> Material durability, mechanical load, regolith dust abrasion, thermal transfer &amp; rover/module operability.',
+    meters: ['Terrain mechanical fidelity', 'Mineral &amp; regolith dust properties', 'Hardware testing utility'],
+    promptFocus: 'Aerospace & Robotics Engineer: focus on mechanical stress, thermal dissipation, regolith abrasion, sensor/LiDAR interference, structural stability, and hardware testbed fidelity.'
+  },
+  government: {
+    label: 'Government (Policy)',
+    color: 'var(--ok)',
+    hint: '<strong>Government Focus:</strong> National mission safety, scientific conservation zoning, regulatory corridors, security &amp; international cooperation.',
+    meters: ['Site safety &amp; isolation level', 'Zoning &amp; conservation value', 'Public infrastructure readiness'],
+    promptFocus: 'Government Space Agency & Policy Planner: focus on mission safety, environmental protection, airspace/territorial clearance, public infrastructure readiness, and strategic scientific value.'
+  },
+  enterprise: {
+    label: 'Enterprise (Commercial)',
+    color: 'var(--warn)',
+    hint: '<strong>Enterprise Focus:</strong> Operational expenditure (OPEX/CAPEX), supply chain logistics, ISRU commercialization potential &amp; testing ROI.',
+    meters: ['Cost &amp; logistics efficiency', 'ISRU commercialization potential', 'Commercial deployment feasibility'],
+    promptFocus: 'Commercial Aerospace Enterprise: focus on logistics cost, CAPEX/OPEX efficiency, supply chain access, ISRU commercialization potential, and R&D return on investment.'
   }
 };
 
@@ -1791,20 +1814,13 @@ function isSameSite(a,b){
   }
   return true;
 }
-function dedupeCat(list){
-  const out=[];
-  for(const item of list){
-    if(item&&item.locationName&&!out.some(x=>isSameSite(x,item)))out.push(item);
-  }
-  return out;
-}
 const NUMK=['latitude','longitude','humidity','popDensity','temp','wind','windDir','pressure','elevation'];
 const fromServer=x=>{NUMK.forEach(k=>{if(x[k]===null||x[k]===undefined)x[k]=NaN});return x};
-async function saveSite(entry){const d=await post('api/sites',entry);return fromServer(d.site)}
+async function saveSite(entry){const d=await post('sites.php',entry);return fromServer(d.site)}
 
 async function load(){
   try{
-    const [s,d]=await Promise.all([api('api/sites?target=all'),api('api/data')]);
+    const [s,d]=await Promise.all([api('sites.php?target=all'),api('data.php')]);
     cat=s.sites.map(fromServer);
     for(const p of Object.values(P)){
       const def={...p,score:p.target==='Mars'?94:92};delete def.chip;delete def.nasaDims;

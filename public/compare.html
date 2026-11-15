@@ -216,42 +216,6 @@
       display: inline-block;
     }
 
-    /* Visual Charts Section */
-    .charts-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 20px;
-      margin-bottom: 32px;
-    }
-    @media (max-width: 900px) {
-      .charts-row { grid-template-columns: 1fr; }
-    }
-    .chart-box {
-      background: var(--card-bg);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 24px;
-    }
-    .chart-box h3 {
-      font-size: 15px;
-      font-weight: 600;
-      margin-bottom: 16px;
-      color: #e2e8f0;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .chart-box h3 small {
-      font-size: 12px;
-      font-weight: normal;
-      color: var(--text-dim);
-    }
-    .canvas-container {
-      position: relative;
-      width: 100%;
-      height: 320px;
-    }
-
     /* Internal Cross-section SVG View */
     .cross-section-container {
       background: var(--card-bg);
@@ -531,7 +495,6 @@
   </style>
 </head>
 <body>
-<script>(()=>{const A='';fetch(A+'api/auth?action=me',{credentials:'include'}).then(r=>r.json()).then(d=>{if(!d.loggedIn)location.replace('login.html')}).catch(()=>location.replace('login.html'))})();</script>
 <a href="web_test.html" style="position:fixed;left:14px;bottom:14px;z-index:9999;padding:7px 13px;background:#161c24;color:#e7eaee;border:1px solid #2a3340;border-radius:8px;font:13px sans-serif;text-decoration:none">← Back to main</a>
 
   <header>
@@ -1568,7 +1531,7 @@
       marsMap.on('click', (e) => selectLocation('Mars', e.latlng.lat, e.latlng.lng));
 
       // Load Moon & Mars sites from MySQL DB
-      fetch('api/compare', { credentials: 'include' })
+      fetch('compare_api.php')
         .then(r => r.json())
         .then(data => {
           if (!data.ok || !data.sites) return;
