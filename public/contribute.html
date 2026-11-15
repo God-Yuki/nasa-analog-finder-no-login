@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Contribute Analog Site · Terrestrial Analog Finder</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+/* ==== style.css (inlined) ==== */
+/* ==========================================================================
+   1. BẢNG MÀU & BIẾN GIAO DIỆN (Chỉnh màu sắc chủ đạo tại đây)
+   ========================================================================== */
+:root {
+  --bg:   #0e1217; /* Màu nền chính (tối sâu) */
+  --pn:   #161c24; /* Màu nền khung / thanh bên */
+  --pn2:  #1e2630; /* Màu nền nút bấm / thẻ phụ */
+  --ln:   #2a3340; /* Màu đường viền (border) */
+  --tx:   #e7eaee; /* Màu chữ chính */
+  --mu:   #8d98a8; /* Màu chữ phụ / chú thích */
+  --moon: #8cc4e8; /* Màu chủ đạo Mặt Trăng (Xanh băng) */
+  --mars: #e0795a; /* Màu chủ đạo Sao Hỏa (Đỏ cam) */
+  --ok:   #5fb98a; /* Màu điểm cao / thành công (Xanh lá) */
+  --warn: #d9a441; /* Màu điểm trung bình (Vàng) */
+  --bad:  #e0795a; /* Màu điểm thấp / cảnh báo (Đỏ) */
+}
+
+/* ==========================================================================
+   2. CÀI ĐẶT CƠ BẢN & FONT CHỮ
+   ========================================================================== */
+* {
+  box-sizing: border-box;
+  margin: 0;
+}
+
+body {
+  font: 14px/1.5 'IBM Plex Sans', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--tx);
+}
+
+button, input, select, textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--moon);
+  outline-offset: 2px;
+}
+
+/* ==========================================================================
+   3. THANH HEADER & ĐIỀU HƯỚNG
+   ========================================================================== */
+header {
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--ln);
+  background: var(--pn);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.mark {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: conic-gradient(var(--moon) 0 50%, var(--mars) 0);
+}
+
+.brand b {
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.brand span {
+  color: var(--mu);
+  font-size: 12px;
+}
+
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--ln);
+  background: var(--pn2);
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.btn:hover {
+  border-color: var(--mu);
+}
+
+.btn.on {
+  color: var(--ok);
+  border-color: var(--ok);
+}
+
+.btn.primary {
+  background: color-mix(in srgb, var(--moon) 15%, var(--pn2));
+  border-color: var(--moon);
+  color: var(--moon);
+  font-weight: 500;
+}
+
+.btn.primary:hover {
+  background: color-mix(in srgb, var(--moon) 25%, var(--pn2));
+}
+
+/* ==========================================================================
+   4. BỐ CỤC CHÍNH (SIDEBAR & MAIN)
+   ========================================================================== */
+.app {
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  height: calc(100dvh - 56px);
+}
+
+aside, main {
+  overflow: auto;
+  padding: 20px;
+}
+
+aside {
+  border-right: 1px solid var(--ln);
+  background: var(--pn);
+}
+
+main {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+h2 {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.tag {
+  font: 400 11px 'IBM Plex Mono', monospace;
+  color: var(--mu);
+  border: 1px solid var(--ln);
+  border-radius: 4px;
+  padding: 1px 6px;
+}
+
+.tag.ai {
+  color: var(--ok);
+  border-color: var(--ok);
+}
+
+/* ==========================================================================
+   5. NÚT PRESETS & FORM NHẬP LIỆU
+   ========================================================================== */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 20px;
+}
+
+.chip {
+  border: 1px solid var(--ln);
+  background: none;
+  border-radius: 99px;
+  padding: 3px 11px;
+  font-size: 12px;
+  color: var(--mu);
+}
+
+.chip:hover {
+  color: var(--tx);
+  border-color: var(--mu);
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+label, .lb {
+  font-size: 12px;
+  color: var(--mu);
+  display: block;
+  margin-bottom: 4px;
+}
+
+input[type=text],
+input[type=number],
+input[type=password],
+input[type=url],
+select,
+textarea {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--ln);
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+
+input:focus, select:focus, textarea:focus {
+  border-color: var(--moon);
+  outline: 0;
+}
+
+textarea {
+  resize: vertical;
+  min-height: 84px;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.num {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 13px;
+}
+
+.seg {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.seg label {
+  margin: 0;
+  cursor: pointer;
+}
+
+.seg input {
+  position: absolute;
+  opacity: 0;
+}
+
+.seg div {
+  border: 1px solid var(--ln);
+  border-radius: 6px;
+  padding: 9px;
+  text-align: center;
+  color: var(--tx);
+  font-weight: 500;
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  align-items: center;
+}
+
+.seg div::before {
+  content: "";
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--c);
+}
+
+.seg input:checked + div {
+  border-color: var(--c);
+  background: color-mix(in srgb, var(--c) 12%, transparent);
+}
+
+.seg input:focus-visible + div {
+  outline: 2px solid var(--moon);
+  outline-offset: 2px;
+}
+
+.go {
+  background: var(--tx);
+  color: var(--bg);
+  border: 0;
+  border-radius: 6px;
+  padding: 10px;
+  font-weight: 600;
+}
+
+.go:hover {
+  background: #fff;
+}
+
+.go:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+
+.hint {
+  font-size: 11px;
+  color: var(--mu);
+  margin-top: 4px;
+}
+
+/* ==========================================================================
+   6. BẢN ĐỒ TƯƠNG TÁC (LEAFLET MAP)
+   ========================================================================== */
+#map {
+  height: 340px;
+  border: 1px solid var(--ln);
+  border-radius: 8px;
+  flex: none;
+  position: relative;
+}
+
+.leaflet-container {
+  background: var(--bg);
+}
+
+#map[data-style="dark"] .leaflet-tile-pane {
+  filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.85) saturate(0.5);
+}
+
+.map-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: -12px;
+}
+
+.map-styles {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.map-styles button {
+  border: 1px solid var(--ln);
+  background: var(--pn);
+  color: var(--mu);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+.map-styles button:hover {
+  color: var(--tx);
+  border-color: var(--mu);
+}
+
+.map-styles button.active {
+  color: var(--moon);
+  border-color: var(--moon);
+  background: color-mix(in srgb, var(--moon) 12%, var(--pn));
+}
+
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+  background: var(--pn2);
+  color: var(--tx);
+  border: 1px solid var(--ln);
+}
+
+.pin {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: 0 0 10px var(--c);
+  background: var(--c);
+}
+
+/* ==========================================================================
+   7. KHUNG KẾT QUẢ PHÂN TÍCH & CHẤM ĐIỂM
+   ========================================================================== */
+.panel {
+  background: var(--pn);
+  border: 1px solid var(--ln);
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.st {
+  display: none;
+}
+
+#res[data-s=e] .e,
+#res[data-s=l] .l {
+  display: block;
+  text-align: center;
+  padding: 36px 0;
+}
+
+#res[data-s=d] .d {
+  display: block;
+}
+
+.st h3 {
+  font-size: 16px;
+  margin-bottom: 4px;
+}
+
+.st p {
+  color: var(--mu);
+  max-width: 420px;
+  margin: auto;
+}
+
+.spin {
+  width: 34px;
+  height: 34px;
+  margin: 0 auto 14px;
+  border: 3px solid var(--ln);
+  border-top-color: var(--moon);
+  border-radius: 50%;
+  animation: s 1s linear infinite;
+}
+
+@keyframes s {
+  to { rotate: 360deg; }
+}
+
+.head {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--ln);
+  margin-bottom: 16px;
+}
+
+.head h3 {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 6px 0 2px;
+}
+
+.badge {
+  font-size: 12px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 4px;
+  margin-right: 6px;
+  background: var(--pn2);
+  color: var(--mu);
+}
+
+.ring {
+  position: relative;
+  width: 76px;
+  height: 76px;
+  flex: none;
+  text-align: center;
+}
+
+.ring svg {
+  rotate: -90deg;
+}
+
+.ring circle {
+  fill: none;
+  stroke-width: 6;
+}
+
+.ring b {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.ring small {
+  color: var(--mu);
+  font-size: 11px;
+}
+
+.meters {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.meters div {
+  font-size: 12px;
+  color: var(--mu);
+}
+
+.meters b {
+  color: var(--tx);
+  float: right;
+  font-weight: 500;
+}
+
+.bar {
+  height: 4px;
+  background: var(--pn2);
+  border-radius: 2px;
+  margin-top: 6px;
+  overflow: hidden;
+}
+
+.bar i {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: var(--moon);
+  transition: width 0.9s;
+}
+
+.md h2 {
+  font-size: 15px;
+  margin: 0 0 6px;
+  display: block;
+}
+
+.md h3 {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--moon);
+  margin: 16px 0 4px;
+}
+
+.md {
+  color: #c4ccd7;
+  max-width: 72ch;
+}
+
+.md ul {
+  margin-left: 18px;
+}
+
+.md strong {
+  color: var(--tx);
+  font-weight: 600;
+}
+
+/* ==========================================================================
+   8. DANH MỤC ĐỊA ĐIỂM (CATALOG CARDS)
+   ========================================================================== */
+.gal {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.card {
+  background: var(--pn);
+  border: 1px solid var(--ln);
+  border-left: 3px solid var(--c);
+  border-radius: 8px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.card .top {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--c);
+  font-weight: 500;
+}
+
+.card .top b {
+  color: var(--tx);
+  font-size: 15px;
+}
+
+.card h4 {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.card small {
+  color: var(--mu);
+  font-size: 12px;
+}
+
+.card p {
+  font-size: 12px;
+  color: #aab4c2;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.card .ft {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: auto;
+  padding-top: 8px;
+  border-top: 1px solid var(--ln);
+  font-size: 11px;
+  color: var(--mu);
+}
+
+.card .ft button {
+  background: none;
+  border: 0;
+  color: var(--moon);
+  font-size: 12px;
+}
+
+/* ==========================================================================
+   9. HỘP THOẠI (DIALOG / MODAL) & RESPONSIVE
+   ========================================================================== */
+dialog {
+  background: var(--pn);
+  color: var(--tx);
+  border: 1px solid var(--ln);
+  border-radius: 10px;
+  padding: 20px;
+  width: min(400px, 92vw);
+}
+
+dialog::backdrop {
+  background: rgba(0, 0, 0, 0.7);
+}
+
+dialog h3 {
+  font-size: 15px;
+  margin-bottom: 6px;
+}
+
+dialog p {
+  color: var(--mu);
+  font-size: 13px;
+  margin-bottom: 14px;
+}
+
+dialog menu {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 0;
+  margin: 14px 0 0;
+}
+
+@media (max-width: 900px) {
+  .app {
+    display: block;
+    height: auto;
+  }
+  aside {
+    border: 0;
+    border-bottom: 1px solid var(--ln);
+  }
+  .meters {
+    grid-template-columns: 1fr;
+  }
+  .brand span {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+
+.tifinfo{display:grid;gap:6px;margin:0 0 12px;font-size:13px;color:var(--mu)}.tifinfo p{margin:0}.tifinfo b{color:var(--tx)}
+.tifrow{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:13px;color:var(--mu);margin:6px 0}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <div class="mark"></div>
+    <b>Terrestrial Analog Finder</b>
+    <span>Community Site Contribution · NASA Space Apps</span>
+  </div>
+  <div class="nav-actions">
+    <span id="userInfo" style="color:var(--mu);font-size:13px"></span>
+    <a class="btn" href="web_test.html">← Back to Analyzer</a>
+    <button class="btn" id="outBtn">Sign out</button>
+  </div>
+</header>
+
+<div class="app">
+<aside>
+  <h2>Contribute a new analog site <span class="tag ai">Community</span></h2>
+  <form id="cf">
+    <div>
+      <span class="lb">Target body</span>
+      <div class="seg">
+        <label><input type="radio" name="t" value="Moon" checked><div style="--c:var(--moon)">Moon base</div></label>
+        <label><input type="radio" name="t" value="Mars"><div style="--c:var(--mars)">Mars outpost</div></label>
+      </div>
+    </div>
+
+    <div>
+      <label for="siteName">Site name</label>
+      <input type="text" id="siteName" required placeholder="e.g. Askja Caldera, Phong Nha Cave">
+    </div>
+
+    <div>
+      <label for="country">Country / Region</label>
+      <input type="text" id="country" required placeholder="e.g. Iceland, Vietnam, Chile">
+    </div>
+
+    <div>
+      <div class="row">
+        <div>
+          <label for="lat">Latitude (°)</label>
+          <input class="num" type="number" step="any" id="lat" required placeholder="65.03">
+        </div>
+        <div>
+          <label for="lng">Longitude (°)</label>
+          <input class="num" type="number" step="any" id="lng" required placeholder="-16.75">
+        </div>
+      </div>
+      <div class="hint">Tip: Click anywhere on the map to pick coordinates automatically.</div>
+    </div>
+
+    <div class="row">
+      <div>
+        <label for="hum">Humidity (%)</label>
+        <input class="num" type="number" min="0" max="100" step="any" id="hum" placeholder="12">
+      </div>
+      <div>
+        <label for="pop">Pop. density (/km²)</label>
+        <input class="num" type="number" min="0" step="any" id="pop" placeholder="0.1">
+      </div>
+    </div>
+
+    <div>
+      <label for="terrain">Dominant terrain</label>
+      <select id="terrain" required>
+        <option value="" disabled selected>Select terrain…</option>
+        <option value="Impact Crater">Impact crater / breccia</option>
+        <option value="Volcanic & Basaltic">Volcanic / basaltic regolith</option>
+        <option value="Lava Tube & Cave">Lava tube / cave shelter</option>
+        <option value="Hyperarid Desert">Hyperarid desert / extreme UV</option>
+        <option value="Polar & Permafrost">Polar glacier / permafrost</option>
+        <option value="Hydrothermal & Saline">Hydrothermal / acidic saline lake</option>
+      </select>
+    </div>
+
+    <div>
+      <label for="feat">Geological & environmental details</label>
+      <textarea id="feat" required placeholder="Describe mineralogy, regolith grain size, temperature extremes, radiation, or mission testing value…"></textarea>
+    </div>
+
+    <div>
+      <label for="contributor">Contributor name / team</label>
+      <input type="text" id="contributor" required placeholder="Your name or research group">
+    </div>
+
+    <div>
+      <label for="refUrl">Reference / paper link (optional)</label>
+      <input type="url" id="refUrl" placeholder="https://...">
+    </div>
+
+    <button class="go" id="submitBtn">Submit site to catalog</button>
+  </form>
+</aside>
+
+<main>
+  <div class="map-bar">
+    <h2 style="margin:0">Click on map to select coordinates <span class="tag" id="coordTag">No point selected</span></h2>
+    <div class="map-styles" id="mapStyles">
+      <button type="button" data-style="satellite">Satellite</button>
+      <button type="button" data-style="topo">Terrain</button>
+      <button type="button" data-style="windy">Windy Live</button>
+    </div>
+  </div>
+  <div id="map" data-style="satellite"></div>
+  <iframe id="windyFrame" hidden title="Windy Live Weather Map" src="https://embed.windy.com/embed.html?type=map&amp;location=coordinates&amp;metricRain=mm&amp;metricTemp=°C&amp;metricWind=km/h&amp;zoom=4&amp;overlay=wind&amp;product=ecmwf&amp;level=surface&amp;lat=-24.08&amp;lon=-69.96&amp;englishLabels=true"></iframe>
+  
+  <section class="panel" id="previewBox" hidden>
+    <div class="head" style="margin-bottom:0;border-bottom:0;padding-bottom:0">
+      <div>
+        <span class="badge" id="pBody"></span>
+        <span class="badge" id="pTerr"></span>
+        <h3 id="pName"></h3>
+        <div style="color:var(--mu);font-size:12px" id="pMeta"></div>
+      </div>
+      <div class="ring">
+        <svg width="76" height="76">
+          <circle cx="38" cy="38" r="32" stroke="var(--pn2)"/>
+          <circle id="pArc" cx="38" cy="38" r="32" stroke="var(--ok)" stroke-dasharray="201" stroke-dashoffset="201" style="transition:stroke-dashoffset .9s"/>
+        </svg>
+        <b id="pScore">0</b>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px">
+      <h2 style="margin:0">Catalog sites <span class="tag" style="margin-left:8px"><span id="total">0</span> sites</span></h2>
+      <div class="map-styles" id="catTabs">
+        <button type="button" data-f="all" class="active">All</button>
+        <button type="button" data-f="Moon">Moon</button>
+        <button type="button" data-f="Mars">Mars</button>
+      </div>
+    </div>
+    <div class="gal" id="gal"></div>
+  </section>
+</main>
+</div>
+
+<dialog id="msgDlg">
+  <h3 id="msgT"></h3>
+  <p id="msgB"></p>
+  <menu>
+    <a class="btn primary" href="web_test.html">View in Analyzer</a>
+    <button class="btn" onclick="msgDlg.close()">Stay here</button>
+  </menu>
+</dialog>
+
+<script>
+const $=id=>document.getElementById(id),C='nasa_analog_catalog',S='nasa_session';
+const cf=$('cf'),siteName=$('siteName'),country=$('country'),lat=$('lat'),lng=$('lng'),
+      hum=$('hum'),pop=$('pop'),
+      terrain=$('terrain'),feat=$('feat'),contributor=$('contributor'),refUrl=$('refUrl'),
+      coordTag=$('coordTag'),gal=$('gal'),total=$('total'),userInfo=$('userInfo'),outBtn=$('outBtn'),
+      previewBox=$('previewBox'),pBody=$('pBody'),pTerr=$('pTerr'),pName=$('pName'),
+      pMeta=$('pMeta'),pArc=$('pArc'),pScore=$('pScore'),msgDlg=$('msgDlg'),msgT=$('msgT'),msgB=$('msgB');
+
+// ===== Kết nối Node.js backend =====
+// Node.js server (chạy local: npm start). Dùng cùng hostname với trang web để cookie phiên được gửi kèm.
+const HOST='';
+const API={auth:HOST+'api/auth',sites:HOST+'api/contribute'};   // api/contribute <-> bảng moon_base_sites, mars_outpost_sites, contributions (database `railway`)
+async function api(url,opt){
+  const r=await fetch(url,{credentials:'include',headers:{'Content-Type':'application/json'},...opt});
+  const d=await r.json().catch(()=>({error:`The server did not answer correctly (HTTP ${r.status}). Is the server running?`}));
+  if(r.status===401){window.location.href='login.html';throw new Error('login')}
+  if(!r.ok)throw new Error(d.error||`Request failed (${r.status})`);
+  return d;
+}
+
+outBtn.onclick=async()=>{
+  try{await fetch(API.auth+'?action=logout',{credentials:'include'})}catch{}
+  window.location.href='login.html';
+};
+
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const col=b=>b==='Moon'?'#8cc4e8':'#e0795a';
+
+const P={
+  atacama:{target:'Mars',locationName:'Atacama Desert (Yungay), Chile',latitude:-24.08,longitude:-69.96,humidity:10,popDensity:0.1,terrainType:'Hyperarid Desert',features:'Extreme hyperaridity, high UV flux, nitrate-perchlorate soils, lack of organic carbon, similar to Viking & Curiosity landing sites.'},
+  haughton:{target:'Moon',locationName:'Haughton Impact Crater, Devon Island, Canada',latitude:75.38,longitude:-89.67,humidity:35,popDensity:0,terrainType:'Impact Crater',features:'23km diameter impact structure, hydrothermal breccia, shatter cones, permafrost, polar desert. Utilized for rover mobility testing.'},
+  mcmurdo:{target:'Mars',locationName:'McMurdo Dry Valleys, Antarctica',latitude:-77.5,longitude:162.5,humidity:15,popDensity:0,terrainType:'Polar & Permafrost',features:'Ice-free cold desert, polygonally patterned ground, permafrost with subterranean brines analogous to Martian polar caps.'},
+  lanzarote:{target:'Moon',locationName:'Lanzarote Lava Tube Caves, Spain',latitude:29.14,longitude:-13.48,humidity:45,popDensity:18,terrainType:'Lava Tube & Cave',features:'Volcanic basaltic lava tubes (6km), structural roof stability, radiation & micrometeorite protection simulation for Moon habitats.'},
+  hiseas:{target:'Moon',locationName:'HI-SEAS Habitat, Mauna Loa, Hawaii',latitude:19.53,longitude:-155.57,humidity:30,popDensity:0.5,terrainType:'Volcanic & Basaltic',features:'High-altitude basaltic shield volcano terrain, oxidized volcanic regolith, used for long-duration analog astronaut isolation simulations.'}
+};
+
+let map,pickMarker=null,cat=[],catFilter='all';
+
+function scoreSite(d){
+  const moon=d.target==='Moon',t=(d.features+' '+d.terrainType).toLowerCase(),has=(...w)=>w.some(x=>t.includes(x));
+  let s=66;
+  if(moon){if(has('crater','impact','breccia'))s+=14;if(has('lava tube','cave'))s+=16;if(has('basalt','regolith'))s+=12}
+  else{if(has('hyperarid','desert','uv'))s+=14;if(has('permafrost','ice','brine'))s+=13;if(has('perchlorate','oxide','iron'))s+=12}
+  if(!isNaN(d.humidity)){
+    if(d.humidity<=20)s+=8;
+    else if(d.humidity<=45)s+=3;
+    else if(d.humidity>65)s-=8;
+  }
+  if(!isNaN(d.popDensity)){
+    if(d.popDensity<=1)s+=8;
+    else if(d.popDensity<=15)s+=4;
+    else if(d.popDensity>100)s-=10;
+  }
+  return Math.min(96,Math.max(45,s));
+}
+
+function pin(la,ln,title,body,terr){
+  if(isNaN(la)||isNaN(ln))return;
+  const c=col(body);
+  L.marker([la,ln],{icon:L.divIcon({className:'',html:`<div class="pin" style="--c:${c}"></div>`,iconSize:[14,14]})}).addTo(map)
+   .bindPopup(`<strong>${esc(title)}</strong><br><span style="color:${c}">${body}</span> · <span style="color:#8d98a8">${esc(terr)}</span>`);
+}
+
+// 5 địa điểm mẫu: web_test.html lưu chúng vào database của tài khoản ở lần đăng nhập đầu;
+// nếu chưa có thì chỉ hiển thị tạm ở đây (không ghi vào database)
+const SAMPLES=Object.values(P).map(p=>({...p,score:p.target==='Mars'?94:92,timestamp:Date.now()}));
+const NUMK=['latitude','longitude','humidity','popDensity','temp','wind','windDir','pressure','elevation'];
+const fromServer=x=>{NUMK.forEach(k=>{if(x[k]===null||x[k]===undefined)x[k]=NaN});return x};
+const sameName=(a,b)=>(a.locationName||'').trim().toLowerCase()===(b.locationName||'').trim().toLowerCase();
+
+// Tải từ database `railway` (moon_base_sites + mars_outpost_sites + contributions) của CHÍNH tài khoản đang đăng nhập
+async function load(){
+  const me=await api(API.auth+'?action=me');
+  if(!me.loggedIn){window.location.href='login.html';return}
+  userInfo.textContent=me.name;
+  contributor.value=me.name;
+  const d=await api(API.sites);
+  const mine=d.sites.map(fromServer);
+  cat=[...mine,...SAMPLES.filter(x=>!mine.some(m=>sameName(m,x)))];   // địa điểm của tài khoản trước, rồi tới preset còn thiếu
+  cat.forEach(s=>pin(s.latitude,s.longitude,s.locationName,s.target,s.terrainType));
+  draw();
+}
+
+function draw(){
+  const list=cat.map((c,i)=>({c,i})).filter(({c})=>catFilter==='all'||c.target===catFilter);
+  total.textContent=list.length;
+  gal.innerHTML=list.map(({c,i})=>`<article class="card" style="--c:${col(c.target)}">
+    <div class="top"><span>${c.target} base${c.source==='contribute'?' · Community':''}</span><b>${c.score}%</b></div>
+    <h4>${esc(c.locationName)}</h4>
+    <small>${esc(c.terrainType)}${c.contributor?` · By ${esc(c.contributor)}`:''}</small>
+    <p>${esc(c.features)}</p>
+    <div class="ft">
+      <span>Logged ${new Date(c.timestamp).toLocaleDateString()}</span>
+      <div style="display:flex;gap:8px">
+        ${c.refUrl?`<a href="${esc(c.refUrl)}" target="_blank" rel="noopener" style="color:var(--ok);font-size:12px">Ref ↗</a>`:''}
+        ${!isNaN(c.latitude)&&!isNaN(c.longitude)?`<button type="button" data-i="${i}">Show on map</button>`:''}
+      </div>
+    </div>
+  </article>`).join('');
+}
+
+$('catTabs').onclick=e=>{
+  const f=e.target.dataset.f;if(!f)return;
+  catFilter=f;
+  [...$('catTabs').children].forEach(b=>b.classList.toggle('active',b.dataset.f===f));
+  draw();
+};
+
+gal.onclick=e=>{
+  const c=cat[e.target.dataset.i];
+  if(c){
+    map.flyTo([c.latitude,c.longitude],6);
+    scrollTo({top:0});
+    $('map').scrollIntoView({behavior:'smooth',block:'nearest'});
+  }
+};
+
+const MAP_LAYERS={
+  satellite:{url:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',attr:'NASA Space Apps | Esri Satellite'},
+  topo:{url:'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',attr:'NASA Space Apps | OpenTopoMap'},
+  light:{url:'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',attr:'NASA Space Apps | OSM'}
+};
+map=L.map('map',{center:[20,0],zoom:2,minZoom:1,maxZoom:16});
+let curTile=L.tileLayer(MAP_LAYERS.satellite.url,{attribution:MAP_LAYERS.satellite.attr,subdomains:'abcd'}).addTo(map);
+// Windy Live: bản đồ thời tiết nhúng, mở tại tọa độ đang nhập (mặc định Atacama)
+const wxMapUrl=(la,ln)=>`https://embed.windy.com/embed.html?type=map&location=coordinates&metricRain=mm&metricTemp=°C&metricWind=km/h&zoom=5&overlay=wind&product=ecmwf&level=surface&lat=${la}&lon=${ln}&detailLat=${la}&detailLon=${ln}&marker=true&englishLabels=true`;
+$('mapStyles').onclick=e=>{
+  const st=e.target.dataset.style;if(!st)return;
+  const wf=$('windyFrame'),mp=$('map');
+  [...$('mapStyles').children].forEach(b=>b.classList.toggle('active',b.dataset.style===st));
+  if(st==='windy'){
+    mp.hidden=true;wf.hidden=false;
+    wf.src=wxMapUrl(parseFloat(lat.value)||-24.08,parseFloat(lng.value)||-69.96);
+    return;
+  }
+  if(!MAP_LAYERS[st])return;
+  wf.hidden=true;mp.hidden=false;setTimeout(()=>map.invalidateSize(),50);
+  $('map').dataset.style=st;
+  map.removeLayer(curTile);
+  curTile=L.tileLayer(MAP_LAYERS[st].url,{attribution:MAP_LAYERS[st].attr,subdomains:'abcd'}).addTo(map);
+};
+
+// Click trên bản đồ để chọn tọa độ nhanh
+map.on('click',e=>{
+  const la=Number(e.latlng.lat.toFixed(4)),ln=Number(e.latlng.lng.toFixed(4));
+  lat.value=la;
+  lng.value=ln;
+  coordTag.textContent=`${la}°, ${ln}°`;
+  const target=cf.t.value,c=col(target);
+  if(pickMarker)map.removeLayer(pickMarker);
+  pickMarker=L.marker([la,ln],{icon:L.divIcon({className:'',html:`<div class="pin" style="--c:${c}"></div>`,iconSize:[14,14]})}).addTo(map);
+});
+
+cf.onsubmit=async e=>{
+  e.preventDefault();
+  const submitBtn=$('submitBtn');
+  submitBtn.disabled=true;
+  let entry;
+  try{
+    // Gửi dữ liệu form sang api/contribute -> server ghi vào bảng `contributions` của database `railway`
+    const d=await api(API.sites,{method:'POST',body:JSON.stringify({
+      target:cf.t.value,
+      siteName:siteName.value.trim(),
+      country:country.value.trim(),
+      latitude:lat.value,
+      longitude:lng.value,
+      humidity:hum.value,
+      popDensity:pop.value,
+      terrain:terrain.value,
+      features:feat.value.trim(),
+      contributor:contributor.value.trim(),
+      refUrl:refUrl.value.trim()
+    })});
+    entry=fromServer(d.site);
+  }catch(err){
+    submitBtn.disabled=false;
+    if(err.message!=='login'){msgT.textContent='Không lưu được';msgB.textContent=err.message;msgDlg.showModal()}
+    return;
+  }
+  submitBtn.disabled=false;
+
+  cat.unshift(entry);
+  pin(entry.latitude,entry.longitude,entry.locationName,entry.target,entry.terrainType);
+  map.flyTo([entry.latitude,entry.longitude],5);
+  draw();
+
+  // Hiển thị tóm tắt điểm vừa chấm cho địa điểm đóng góp
+  const c=col(entry.target);
+  previewBox.hidden=false;
+  pBody.textContent=entry.target+' base';
+  pBody.style.cssText=`color:${c};background:${c}22`;
+  pTerr.textContent=entry.terrainType;
+  pName.textContent=entry.locationName;
+  pMeta.textContent=`Contributed by ${entry.contributor} · ${entry.latitude.toFixed(2)}°, ${entry.longitude.toFixed(2)}°`;
+  pScore.textContent=entry.score;
+  pArc.style.stroke=entry.score>80?'var(--ok)':entry.score>60?'var(--warn)':'var(--bad)';
+  pArc.style.strokeDashoffset=201;
+  setTimeout(()=>pArc.style.strokeDashoffset=201-201*entry.score/100,50);
+
+  msgT.textContent='Site added to catalog!';
+  msgB.textContent=`"${entry.locationName}" (${entry.score}% match) has been saved to the database (${entry.target==='Moon'?'moon base':'mars outpost'}).`;
+  msgDlg.showModal();
+
+  siteName.value='';
+  country.value='';
+  feat.value='';
+  refUrl.value='';
+};
+
+load().catch(err=>{if(err.message!=='login'){msgT.textContent='Không tải được dữ liệu';msgB.textContent=err.message;msgDlg.showModal()}});
+</script>
+<script>(()=>{const L={lat:[-90,90,'°'],lng:[-180,180,'°'],hum:[0,100,'%'],pop:[0,50000,'/km²']};
+document.head.insertAdjacentHTML('beforeend','<style>input.num:invalid{border-color:var(--bad);outline:1px solid var(--bad)}</style>');
+for(const id in L){const el=document.getElementById(id),[a,b,u]=L[id];if(!el)continue;el.min=a;el.max=b;const k=()=>{const v=parseFloat(el.value);el.setCustomValidity(!isNaN(v)&&(v<a||v>b)?`Allowed ${a} … ${b} ${u}. Beyond this the place is not habitable / not valid.`:'')};el.addEventListener('input',k);el.addEventListener('change',k)}})();</script>
+</body>
+</html>

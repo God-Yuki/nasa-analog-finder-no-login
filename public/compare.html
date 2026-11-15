@@ -1,0 +1,1605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Comparative Planetary Geology & Climate Visualizer: Earth – Moon – Mars | NASA Space Apps & HCMUS</title>
+  
+  <!-- Google Fonts & Chart.js -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <!-- 1. REQUIRED: Core Leaflet Map Library (Must precede Geocoder) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- 2. Geocoder Search Control Library -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+  <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+  
+  <!-- Other Libraries -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg: #090d16;
+      --card-bg: #111726;
+      --card-bg-hover: #182035;
+      --border: #232f48;
+      --border-light: #324367;
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+      --earth: #38bdf8;
+      --earth-glow: rgba(56, 189, 248, 0.25);
+      --moon: #cbd5e1;
+      --moon-glow: rgba(203, 213, 225, 0.25);
+      --mars: #fb7185;
+      --mars-glow: rgba(251, 113, 133, 0.25);
+      --accent: #6366f1;
+      --success: #10b981;
+      --warning: #f59e0b;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text-main);
+      line-height: 1.6;
+      padding-bottom: 60px;
+    }
+
+    /* Header */
+    header {
+      background: linear-gradient(180deg, rgba(17, 23, 38, 0.95) 0%, rgba(9, 13, 22, 0.8) 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 24px 32px;
+      backdrop-filter: blur(12px);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .header-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .brand-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #38bdf8 0%, #6366f1 50%, #fb7185 100%);
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+      font-size: 20px;
+      color: #fff;
+      box-shadow: 0 0 20px rgba(99, 102, 241, 0.4);
+    }
+    .brand-text h1 {
+      font-size: 19px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: #fff;
+    }
+    .brand-text p {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .badges {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .badge {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 99px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+    }
+    .badge.active {
+      background: rgba(99, 102, 241, 0.15);
+      border-color: var(--accent);
+      color: #a5b4fc;
+    }
+
+    /* Container */
+    .container {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 28px 24px;
+    }
+
+    /* Planet Overview Cards */
+    .planet-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      margin-bottom: 32px;
+    }
+    @media (max-width: 1024px) {
+      .planet-grid { grid-template-columns: 1fr; }
+    }
+    .planet-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.25s ease;
+    }
+    .planet-card:hover {
+      border-color: var(--border-light);
+      background: var(--card-bg-hover);
+      transform: translateY(-3px);
+    }
+    .planet-card.earth { border-top: 4px solid var(--earth); }
+    .planet-card.moon { border-top: 4px solid var(--moon); }
+    .planet-card.mars { border-top: 4px solid var(--mars); }
+
+    .planet-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 16px;
+    }
+    .planet-title h2 {
+      font-size: 22px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .planet-title span {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .planet-tagline {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+      min-height: 40px;
+    }
+    .planet-specs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      font-size: 12px;
+    }
+    .spec-item {
+      background: rgba(0, 0, 0, 0.25);
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.04);
+    }
+    .spec-label {
+      color: var(--text-dim);
+      display: block;
+      margin-bottom: 2px;
+    }
+    .spec-val {
+      font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+      color: #fff;
+    }
+
+    /* Section Header */
+    .section-title {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: #fff;
+    }
+    .section-title i {
+      width: 8px;
+      height: 18px;
+      background: var(--accent);
+      border-radius: 4px;
+      display: inline-block;
+    }
+
+    /* Visual Charts Section */
+    .charts-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 32px;
+    }
+    @media (max-width: 900px) {
+      .charts-row { grid-template-columns: 1fr; }
+    }
+    .chart-box {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+    }
+    .chart-box h3 {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      color: #e2e8f0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .chart-box h3 small {
+      font-size: 12px;
+      font-weight: normal;
+      color: var(--text-dim);
+    }
+    .canvas-container {
+      position: relative;
+      width: 100%;
+      height: 320px;
+    }
+
+    /* Internal Cross-section SVG View */
+    .cross-section-container {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 32px;
+    }
+    .cross-section-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+      margin-top: 16px;
+    }
+    @media (max-width: 900px) {
+      .cross-section-grid { grid-template-columns: 1fr; }
+    }
+    .cross-card {
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      text-align: center;
+    }
+    .cross-card h4 {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+    .cross-svg {
+      width: 100%;
+      max-width: 260px;
+      height: 260px;
+      margin: 0 auto;
+      display: block;
+    }
+    .layer-legend {
+      margin-top: 14px;
+      text-align: left;
+      font-size: 11px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .legend-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    /* Filter & Controls */
+    .controls-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-bottom: 20px;
+      background: var(--card-bg);
+      padding: 16px 20px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+    }
+    .filter-group {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .filter-btn {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 7px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .filter-btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+    }
+    .filter-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+    .search-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .search-input {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 14px;
+      color: #fff;
+      font-size: 13px;
+      outline: none;
+      width: 280px;
+      transition: border 0.2s;
+    }
+    .search-input:focus {
+      border-color: var(--accent);
+    }
+    .count-badge {
+      font-size: 12px;
+      color: var(--text-dim);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Comparison Matrix Table */
+    .table-wrapper {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      margin-bottom: 32px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 13px;
+    }
+    thead {
+      background: rgba(255, 255, 255, 0.03);
+      border-bottom: 1px solid var(--border);
+    }
+    th {
+      padding: 16px 20px;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    th.col-earth { color: var(--earth); width: 27%; }
+    th.col-moon { color: var(--moon); width: 27%; }
+    th.col-mars { color: var(--mars); width: 27%; }
+    th.col-param { width: 19%; }
+
+    tbody tr {
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      transition: background 0.15s;
+    }
+    tbody tr:hover {
+      background: rgba(255, 255, 255, 0.02);
+    }
+    td {
+      padding: 16px 20px;
+      vertical-align: top;
+      line-height: 1.55;
+    }
+    .param-cell strong {
+      display: block;
+      color: #fff;
+      font-size: 13px;
+      margin-bottom: 4px;
+    }
+    .param-category {
+      font-size: 11px;
+      color: var(--text-dim);
+      font-weight: 500;
+      text-transform: uppercase;
+    }
+    .param-unit {
+      font-size: 11px;
+      color: var(--accent);
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .evidence-badge {
+      display: inline-block;
+      margin-top: 6px;
+      font-size: 10px;
+      color: var(--text-dim);
+      font-style: italic;
+    }
+
+    /* Actions Bar */
+    .actions-row {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      margin-top: 16px;
+    }
+    .action-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    .action-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      border-color: var(--border-light);
+    }
+
+    /* Interactive NASA Trek Maps Section */
+    .trek-compare-section {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 32px;
+    }
+    .trek-maps-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-top: 16px;
+    }
+    @media (max-width: 960px) {
+      .trek-maps-grid { grid-template-columns: 1fr; }
+    }
+    .trek-map-card {
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+    }
+    .trek-map-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .trek-map-canvas {
+      height: 380px;
+      width: 100%;
+      border-radius: 8px;
+      background: #05080f;
+      border: 1px solid var(--border);
+      z-index: 1;
+    }
+    .coord-readout {
+      margin-top: 10px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+    }
+    .site-compare-box {
+      margin-top: 20px;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--border-light);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    /* Footer */
+    footer {
+      text-align: center;
+      margin-top: 40px;
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+  </style>
+</head>
+<body>
+<script>(()=>{const A='';fetch(A+'api/auth?action=me',{credentials:'include'}).then(r=>r.json()).then(d=>{if(!d.loggedIn)location.replace('login.html')}).catch(()=>location.replace('login.html'))})();</script>
+<a href="web_test.html" style="position:fixed;left:14px;bottom:14px;z-index:9999;padding:7px 13px;background:#161c24;color:#e7eaee;border:1px solid #2a3340;border-radius:8px;font:13px sans-serif;text-decoration:none">← Back to main</a>
+
+  <header>
+    <div class="header-top">
+      <div class="brand">
+        <div class="brand-icon">Ψ</div>
+        <div class="brand-text">
+          <h1>COMPARATIVE PLANETARY GEOLOGY & CLIMATE VISUALIZER</h1>
+          <p>Cross-Planetary Analysis System: Earth – Moon – Mars (VNU-HCMUS & NASA Space Apps 2026)</p>
+        </div>
+      </div>
+      <div class="badges">
+        <a href="web_test.html" style="text-decoration:none;padding:5px 12px;border-radius:20px;background:rgba(56,189,248,0.18);border:1px solid #38bdf8;color:#bae6fd;font-weight:600;font-size:12px;display:inline-flex;align-items:center;gap:6px;transition:all 0.2s;">← Back to Analyzer (web_test.html)</a>
+        <a href="engine_modules.html" style="text-decoration:none;padding:5px 12px;border-radius:20px;background:rgba(16,185,129,0.18);border:1px solid #10b981;color:#6ee7b7;font-weight:600;font-size:12px;display:inline-flex;align-items:center;gap:6px;transition:all 0.2s;">⚙️ Engine & Modules</a>
+        <span class="badge active">NASA EOSDIS & LeapSpace 2026</span>
+        <span class="badge">VNU-HCM / HCMUS</span>
+        <span class="badge">InSight, Artemis & Tianwen Data</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="container">
+    <!-- Planet Summary Cards -->
+    <div class="planet-grid">
+      <!-- Earth Card -->
+      <div class="planet-card earth">
+        <div class="planet-card-header">
+          <div class="planet-title">
+            <h2 style="color: var(--earth);">Earth</h2>
+            <span>(1.00 M⊕ / 1.00 g)</span>
+          </div>
+        </div>
+        <p class="planet-tagline">Highly dynamic terrestrial planet featuring a global biosphere, active plate tectonics, and a closed liquid-water hydrological cycle.</p>
+        <div class="planet-specs">
+          <div class="spec-item">
+            <span class="spec-label">Mean Radius</span>
+            <span class="spec-val">6,371.0 km</span>
+          </div>
+          <div class="spec-item">
+            <span class="spec-label">Surface Pressure</span>
+            <span class="spec-val">1,013.25 hPa</span>
+          </div>
+          <div class="spec-item">
+            <span class="spec-label">Mean Temp</span>
+            <span class="spec-val">+14.4°C (288 K)</span>
+          </div>
+          <div class="spec-item">
+            <span class="spec-label">Crustal Thickness</span>
+            <span class="spec-val">7 - 35 km</span>
+          </div>
+          <div class="spec-item">
+            <span class="spec-label">Atmosphere</span>
+            <span class="spec-val">78% N₂, 21% O₂</span>
+          </div>
+          <div class="spec-item">
+            <span class="spec-label">Magnetic Field</span>
+            <span class="spec-val">0.31 Gauss (Dynamo)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Moon Card -->
+      <div class="planet-card moon">
+        <div class="planet-card-header">
+          <div class="planet-title">
+            <h2 style="color: var(--moon);">Moon</h2>
+            <span>(0.0123 M⊕ / 0.166 g)</span>
+          </div>
+        </div>
+        <p class="planet-tagline">Cooled stagnant-lid rocky satellite lacking a protective atmosphere, shaped by impact cratering and extreme radiative thermal cycles.</p>
+        <div class="planet-specs">
+          <div class="spec-item">
+            <span class="spec-label">Mean Radius</span>
+            <span class="spec-val">1,737.4 km</span>
+          </div>
+          <div class="spec-item">
+            <span class="spec-label">Surface Pressure</span>
+            <span class="spec-val">~10⁻¹⁰ hPa (Exosphere)</span>
+          </div>
+          <div class="spec-item">
+            <span class="spec-label">Mean Temp</span>
+            <span class="spec-val">~ -23°C (250 K)</span>
+          </div>
+          <div class="spec-item">
+            <span class="spec-label">Crustal Thickness</span>
+            <span class="spec-val">34 - 43 km (GRAIL)</span>
+          </div>
+          <div class="spec-item">
+            <span class="spec-label">Exosphere</span>
+            <span class="spec-val">He, Ne, ⁴⁰Ar, CO₂</span>
+          </div>
+          <div class="spec-item">
+            <span class="spec-label">Magnetic Field</span>
+            <span class="spec-val">None (Remanent only)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mars Card -->
+      <div class="planet-card mars">
+        <div class="planet-card-header">
+          <div class="planet-title">
+            <h2 style="color: var(--mars);">Mars</h2>
+            <span>(0.107 M⊕ / 0.379 g)</span>
+          </div>
+        </div>
+        <p class="planet-tagline">Stagnant-lid red planet with a thin CO₂ atmosphere, global dust storms driving thermodynamics, and complex subsurface hydration cycles.</p>
+        <div class="planet-specs">
+          <div class="spec-item">
+            <span class="spec-label">Mean Radius</span>
+            <span class="spec-val">3,389.5 km</span>
+          </div>
+          <div class="spec-item">
+            <span class="spec-label">Surface Pressure</span>
+            <span class="spec-val">6.1 hPa (Variable)</span>
+          </div>
+          <div class="spec-item">
+            <span class="spec-label">Mean Temp</span>
+            <span class="spec-val">-63°C (210 K)</span>
+          </div>
+          <div class="spec-item">
+            <span class="spec-label">Crustal Thickness</span>
+            <span class="spec-val">49 ± 17 km (InSight)</span>
+          </div>
+          <div class="spec-item">
+            <span class="spec-label">Atmosphere</span>
+            <span class="spec-val">95.3% CO₂, 2.6% N₂</span>
+          </div>
+          <div class="spec-item">
+            <span class="spec-label">Magnetic Field</span>
+            <span class="spec-val">None (Extinct 4 Ga)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Interactive NASA Trek Map Comparison -->
+   <!-- Interactive 3-Body Map Comparison (Earth vs. Moon vs. Mars) -->
+    <div class="trek-compare-section">
+      <div class="section-title">
+        <i></i>
+        <h2>Interactive 3-Body Map Cross-Comparison: Earth vs. Moon vs. Mars</h2>
+      </div>
+      <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">
+        Click on any location across <strong>Earth</strong> (Analogue Sites &amp; Global Satellite), <strong>NASA Moon Trek</strong>, and <strong>NASA Mars Trek</strong> to compare environmental, climatic, and surface parameters side-by-side.
+      </p>
+
+      <!-- 3-Column Map Grid -->
+      <div class="trek-maps-grid" style="grid-template-columns: repeat(3, 1fr);">
+        <!-- Earth Map -->
+        <div class="trek-map-card" style="border-top: 3px solid var(--earth);">
+          <div class="trek-map-header">
+            <span style="color: var(--earth);">🌍 Earth Global &amp; Analogue Sites</span>
+            <span class="badge" id="earthSiteCount">6 Analogue Sites</span>
+          </div>
+          <div id="trekEarthMap" class="trek-map-canvas" style="height: 320px;"></div>
+          <div class="coord-readout">
+            <span id="earthCoordText">Coords: Not clicked</span>
+            <a id="earthMapsLink" href="https://earth.google.com/web/" target="_blank" style="color: var(--earth); text-decoration: none;">Google Earth ↗</a>
+          </div>
+        </div>
+
+        <!-- Moon Map -->
+        <div class="trek-map-card" style="border-top: 3px solid var(--moon);">
+          <div class="trek-map-header">
+            <span style="color: var(--moon);">⚪ NASA Moon Trek (LRO WAC)</span>
+            <span class="badge" id="moonSiteCount">Loading DB sites...</span>
+          </div>
+          <div id="trekMoonMap" class="trek-map-canvas" style="height: 320px;"></div>
+          <div class="coord-readout">
+            <span id="moonCoordText">Coords: Not clicked</span>
+            <a id="moonNasaLink" href="https://trek.nasa.gov/moon/" target="_blank" style="color: var(--earth); text-decoration: none;">NASA Trek ↗</a>
+          </div>
+        </div>
+
+        <!-- Mars Map -->
+        <div class="trek-map-card" style="border-top: 3px solid var(--mars);">
+          <div class="trek-map-header">
+            <span style="color: var(--mars);">🔴 NASA Mars Trek (Viking)</span>
+            <span class="badge" id="marsSiteCount">Loading DB sites...</span>
+          </div>
+          <div id="trekMarsMap" class="trek-map-canvas" style="height: 320px;"></div>
+          <div class="coord-readout">
+            <span id="marsCoordText">Coords: Not clicked</span>
+            <a id="marsNasaLink" href="https://trek.nasa.gov/mars/" target="_blank" style="color: var(--mars); text-decoration: none;">NASA Trek ↗</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3-Way Comparison Table (Earth vs Moon vs Mars) -->
+      <div class="site-compare-box">
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 19%;">Comparison Metric</th>
+              <th style="width: 27%; color: var(--earth);">🌍 Earth Location</th>
+              <th style="width: 27%; color: var(--moon);">⚪ Moon Location</th>
+              <th style="width: 27%; color: var(--mars);">🔴 Mars Location</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Coordinates (Lat, Lng)</strong></td>
+              <td id="cmp-earth-coord" style="font-family: 'JetBrains Mono', monospace; color: #bae6fd;">Click Earth map...</td>
+              <td id="cmp-moon-coord" style="font-family: 'JetBrains Mono', monospace;">Click Moon map...</td>
+              <td id="cmp-mars-coord" style="font-family: 'JetBrains Mono', monospace; color: #fecdd3;">Click Mars map...</td>
+            </tr>
+            <tr>
+              <td><strong>Site / Analogue Region</strong></td>
+              <td id="cmp-earth-name">-</td>
+              <td id="cmp-moon-name">-</td>
+              <td id="cmp-mars-name">-</td>
+            </tr>
+            <tr>
+              <td><strong>Temperature</strong></td>
+              <td id="cmp-earth-temp">-</td>
+              <td id="cmp-moon-temp">-</td>
+              <td id="cmp-mars-temp">-</td>
+            </tr>
+            <tr>
+              <td><strong>Surface Pressure</strong></td>
+              <td id="cmp-earth-press">-</td>
+              <td id="cmp-moon-press">-</td>
+              <td id="cmp-mars-press">-</td>
+            </tr>
+            <tr>
+              <td><strong>Elevation</strong></td>
+              <td id="cmp-earth-elev">-</td>
+              <td id="cmp-moon-elev">-</td>
+              <td id="cmp-mars-elev">-</td>
+            </tr>
+            <tr>
+              <td><strong>Wind &amp; Humidity</strong></td>
+              <td id="cmp-earth-wind">-</td>
+              <td id="cmp-moon-wind">-</td>
+              <td id="cmp-mars-wind">-</td>
+            </tr>
+            <tr>
+              <td><strong>Geology &amp; Analogue Note</strong></td>
+              <td id="cmp-earth-extra">-</td>
+              <td id="cmp-moon-extra">-</td>
+              <td id="cmp-mars-extra">-</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+   
+
+    <!-- Internal Geological Cross-sections (SVG) -->
+    <div class="cross-section-container">
+      <div class="section-title">
+        <i></i>
+        <h2>Deep Interior Structure &amp; Seismology Cross-Sections (Earth PREM vs. Moon Apollo vs. Mars InSight)</h2>
+      </div>
+      <div class="cross-section-grid">
+        <!-- Earth Cross-section -->
+        <div class="cross-card">
+          <h4 style="color: var(--earth);">Earth (PREM Model)</h4>
+          <svg class="cross-svg" viewBox="0 0 200 200">
+            <circle cx="100" cy="100" r="95" fill="#3b82f6" stroke="#60a5fa" stroke-width="2"/>
+            <circle cx="100" cy="100" r="92" fill="#ca8a04"/>
+            <circle cx="100" cy="100" r="54" fill="#ea580c"/>
+            <circle cx="100" cy="100" r="19" fill="#fef08a"/>
+            <text x="100" y="32" font-size="7" fill="#fff" text-anchor="middle" font-weight="600">Crust (7-35 km)</text>
+            <text x="100" y="65" font-size="8" fill="#fff" text-anchor="middle" font-weight="600">Mantle (2,850 km)</text>
+            <text x="100" y="93" font-size="7" fill="#fff" text-anchor="middle" font-weight="600">Liquid Outer Core</text>
+            <text x="100" y="103" font-size="6" fill="#000" text-anchor="middle" font-weight="bold">Inner Core</text>
+          </svg>
+          <div class="layer-legend">
+            <div class="legend-row"><span class="legend-dot" style="background:#3b82f6;"></span> Crust: 7-35 km (Oceanic / Continental)</div>
+            <div class="legend-row"><span class="legend-dot" style="background:#ca8a04;"></span> Mantle: 2,850 km thick silicate layer</div>
+            <div class="legend-row"><span class="legend-dot" style="background:#ea580c;"></span> Outer Core: Liquid Fe-Ni (Radius 3,480 km)</div>
+            <div class="legend-row"><span class="legend-dot" style="background:#fef08a;"></span> Inner Core: Solid Fe-Ni (Radius 1,220 km)</div>
+          </div>
+        </div>
+
+        <!-- Moon Cross-section -->
+        <div class="cross-card">
+          <h4 style="color: var(--moon);">Moon (GRAIL &amp; Apollo Model)</h4>
+          <svg class="cross-svg" viewBox="0 0 200 200">
+            <circle cx="100" cy="100" r="95" fill="#94a3b8" stroke="#cbd5e1" stroke-width="2"/>
+            <circle cx="100" cy="100" r="88" fill="#854d0e"/>
+            <circle cx="100" cy="100" r="28" fill="#b45309"/>
+            <circle cx="100" cy="100" r="18" fill="#f97316"/>
+            <circle cx="100" cy="100" r="12" fill="#fef08a"/>
+            <text x="100" y="30" font-size="7" fill="#fff" text-anchor="middle" font-weight="600">Crust (34-43 km)</text>
+            <text x="100" y="65" font-size="8" fill="#fff" text-anchor="middle" font-weight="600">Mantle (~1,350 km)</text>
+            <text x="100" y="102" font-size="6" fill="#000" text-anchor="middle" font-weight="bold">Fe Core (~330 km)</text>
+          </svg>
+          <div class="layer-legend">
+            <div class="legend-row"><span class="legend-dot" style="background:#94a3b8;"></span> Crust: 34-43 km (Ultra-thin ~5.4 km at Apollo basin)</div>
+            <div class="legend-row"><span class="legend-dot" style="background:#854d0e;"></span> Mantle: Stratified rigid silicate (Apollo SEIS)</div>
+            <div class="legend-row"><span class="legend-dot" style="background:#b45309;"></span> Partial melt zone at lower mantle boundary</div>
+            <div class="legend-row"><span class="legend-dot" style="background:#fef08a;"></span> Small Metallic Core: Total radius ~330 km</div>
+          </div>
+        </div>
+
+        <!-- Mars Cross-section -->
+        <div class="cross-card">
+          <h4 style="color: var(--mars);">Mars (InSight SEIS Model)</h4>
+          <svg class="cross-svg" viewBox="0 0 200 200">
+            <circle cx="100" cy="100" r="95" fill="#ef4444" stroke="#f87171" stroke-width="2"/>
+            <circle cx="100" cy="100" r="88" fill="#9a3412"/>
+            <circle cx="100" cy="100" r="51" fill="#f59e0b"/>
+            <text x="100" y="28" font-size="7" fill="#fff" text-anchor="middle" font-weight="600">Layered Crust (49±17 km)</text>
+            <text x="100" y="65" font-size="8" fill="#fff" text-anchor="middle" font-weight="600">FeO-Rich Mantle (~1,560 km)</text>
+            <text x="100" y="103" font-size="7" fill="#000" text-anchor="middle" font-weight="bold">Liquid Fe Core (1,830 km)</text>
+          </svg>
+          <div class="layer-legend">
+            <div class="legend-row"><span class="legend-dot" style="background:#ef4444;"></span> Crust: Interfaces at 8 km, 20 km; Mean 49±17 km</div>
+            <div class="legend-row"><span class="legend-dot" style="background:#9a3412;"></span> Mantle: Iron-rich silicate (~2x Earth Fe content)</div>
+            <div class="legend-row"><span class="legend-dot" style="background:#f59e0b;"></span> Large Liquid Core: 1,830±40 km radius (S, C, O, H)</div>
+            <div class="legend-row"><span class="legend-dot" style="background:#cbd5e1;"></span> No seismic evidence for a solid inner core</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Controls & Filters for Matrix Table -->
+    <div class="controls-bar">
+      <div class="filter-group" id="categoryFilters">
+        <button class="filter-btn active" data-cat="all">All Metrics</button>
+        <button class="filter-btn" data-cat="Topography">Topography &amp; Surface</button>
+        <button class="filter-btn" data-cat="Internal">Deep Structure</button>
+        <button class="filter-btn" data-cat="Lithosphere">Lithosphere</button>
+        <button class="filter-btn" data-cat="Hydrosphere">Hydrosphere / Water</button>
+        <button class="filter-btn" data-cat="Atmosphere">Atmosphere / Exosphere</button>
+        <button class="filter-btn" data-cat="Temperature">Temperature &amp; Climate</button>
+        <button class="filter-btn" data-cat="Dust">Dust &amp; Aerosols</button>
+      </div>
+      <div class="search-wrapper">
+        <input type="text" id="searchInput" class="search-input" placeholder="Search metrics (e.g., InSight, Tianwen, Hurst, dust storm)...">
+        <span id="resultCount" class="count-badge">Showing: 20/20</span>
+      </div>
+    </div>
+
+    <!-- Comparative Table -->
+    <div class="table-wrapper">
+      <table id="matrixTable">
+        <thead>
+          <tr>
+            <th class="col-param">Scientific Parameter &amp; Unit</th>
+            <th class="col-earth">Earth</th>
+            <th class="col-moon">Moon</th>
+            <th class="col-mars">Mars</th>
+          </tr>
+        </thead>
+        <tbody id="matrixTableBody">
+          <!-- Populated by JS -->
+        </tbody>
+      </table>
+    </div>
+
+    <div class="actions-row">
+      <button class="action-btn" onclick="exportDataJSON()">📥 Export JSON Data</button>
+      <button class="action-btn" onclick="exportDataCSV()">📊 Export CSV Table</button>
+      <button class="action-btn" onclick="window.print()">🖨️ Print / Save PDF Report</button>
+    </div>
+
+    <footer>
+      <p>© 2026 Comparative Planetary Geology Research Team | University of Science - VNU-HCM | NASA Space Apps Challenge</p>
+      <p style="margin-top: 4px; font-size: 11px;">Data integrated from 18 International Earth/Planetary Observation Portals &amp; LeapSpace 2026 Synthesis</p>
+    </footer>
+  </div>
+
+  <!-- INLINE SELF-CONTAINED DATASET -->
+  <script>
+    window.PLANETARY_DATA = {
+      "project_metadata": {
+        "title": "QUANTITATIVE COMPARATIVE PLANETARY GEOLOGY DATASET: EARTH – MOON – MARS",
+        "institution": "University of Science - VNU-HCM",
+        "project": "NASA Space Apps Challenge 2026",
+        "version": "2.0.0",
+        "last_updated": "2026-11-01",
+        "data_sources": [
+          "NASA EOSDIS, USGS, Copernicus ERA5, IRIS, NOAA NCEI, CSA RADARSAT",
+          "LROC NAC, LOLA, GRAIL, Chang'e-5/6, Chandrayaan-2/3, LADEE",
+          "MOLA, HiRISE, InSight SEIS, Perseverance MEDA, Tianwen-1 Zhurong, ExoMars TGO/ACS",
+          "LeapSpace Research & Citations 2020-2026"
+        ]
+      },
+      "planets_summary": {
+        "earth": {
+          "name": "Earth",
+          "type": "Active Dynamic Terrestrial Planet",
+          "mass_kg": 5.9722e+24,
+          "radius_mean_km": 6371.0,
+          "gravity_m_s2": 9.80665,
+          "solar_distance_au": 1.0,
+          "axial_tilt_deg": 23.44,
+          "rotation_period_h": 23.934,
+          "orbital_period_days": 365.256,
+          "magnetic_field_gauss": 0.31,
+          "primary_system_mode": "Coupled plate tectonics – ocean – atmosphere – biosphere cycle"
+        },
+        "moon": {
+          "name": "Moon",
+          "type": "Differentiated Airless Rocky Body",
+          "mass_kg": 7.342e+22,
+          "radius_mean_km": 1737.4,
+          "gravity_m_s2": 1.622,
+          "solar_distance_au": 1.0,
+          "axial_tilt_deg": 1.54,
+          "rotation_period_h": 655.728,
+          "orbital_period_days": 27.322,
+          "magnetic_field_gauss": 0.0001,
+          "primary_system_mode": "Topography – regolith – surface-bound exosphere – extreme radiative thermal cycle"
+        },
+        "mars": {
+          "name": "Mars",
+          "type": "Stagnant-lid Planet with CO2 Atmosphere",
+          "mass_kg": 6.4171e+23,
+          "radius_mean_km": 3389.5,
+          "gravity_m_s2": 3.721,
+          "solar_distance_au": 1.524,
+          "axial_tilt_deg": 25.19,
+          "rotation_period_h": 24.623,
+          "orbital_period_days": 686.98,
+          "magnetic_field_gauss": 0.001,
+          "primary_system_mode": "Topography – regolith – CO2 atmosphere – dust circulation – global dust storms"
+        }
+      },
+      "comparative_metrics": [
+        {
+          "category": "Topography & Geomorphology",
+          "parameter": "Hypsometric Distribution",
+          "unit": "Morphological Class",
+          "earth": "Distinctly Bimodal: Continents (+840 m) and Ocean Basins (-3,682 m), reflecting two distinct crustal types",
+          "moon": "Asymmetric Unimodal: Ancient rugged Highlands and relatively smooth basaltic Maria",
+          "mars": "Hemispheric Crustal Dichotomy: Rugged elevated Southern Highlands vs. smooth low-lying Northern Plains",
+          "scientific_evidence": "Earth ETOPO1/NASADEM; Moon LOLA DTM; Mars MOLA MEGDR; Cai & Fa (2020); Mangold et al. (2020)"
+        },
+        {
+          "category": "Topography & Geomorphology",
+          "parameter": "Elevation Extremes Range",
+          "unit": "km",
+          "earth": "19.72 km (-10,984 m Mariana Trench to +8,848.86 m Mount Everest)",
+          "moon": "19.88 km (-9.10 km Antoniadi/SPA basin floor to +10.78 km Engel'gardt crater rim)",
+          "mars": "29.20 km (-7.20 km Hellas Planitia floor to +21.90 km Olympus Mons summit)",
+          "scientific_evidence": "Earth USGS/GEBCO; Moon LOLA; Mars MOLA; Tao et al. (2021); Liu et al. (2022)"
+        },
+        {
+          "category": "Topography & Geomorphology",
+          "parameter": "Meter-Scale Topographic Roughness",
+          "unit": "Ratio & Slope",
+          "earth": "Varies widely by vegetation and weathering; flat deserts (slopes <1°) to steep mountain ranges (>45°)",
+          "moon": "Highlands are 2.4x rougher in bidirectional slope, 3.0x in RMS height, and 2.7x in absolute slope than maria; Hurst ~0.9",
+          "mars": "Varies by landing site: Tianwen-1 plains are very smooth (slopes <3°, relief <30 cm); Jezero is boulder-strewn, Valles Marineris complex",
+          "scientific_evidence": "Cai & Fa (2020) JGR Planets; Liu et al. (2022); Mangold et al. (2020)"
+        },
+        {
+          "category": "Topography & Geomorphology",
+          "parameter": "Surficial Regolith Thickness",
+          "unit": "m",
+          "earth": "Variable soil cover: 0.1 m (rocky peaks) to 10-50 m (deeply weathered tropical saprolite)",
+          "moon": "1 - 10 m in maria (mean ~4-5 m); 1 - 18 m in highlands (mean ~10-12 m); fractured megaregolith 1 - 3 km deep",
+          "mars": "Several meters to tens of meters; unconsolidated granular material, bulk density 1.0 - 1.8 g/cm³, cohesion 1 - 5 kPa",
+          "scientific_evidence": "Xu et al. (2024); Ziborov et al. (2024); Menges & Cannon (2026)"
+        },
+        {
+          "category": "Internal Crustal Structure",
+          "parameter": "Crustal Thickness",
+          "unit": "km",
+          "earth": "Global mean ~35 km (Continental crust: 30 - 70 km; Oceanic crust: 5 - 10 km, mean 7 km)",
+          "moon": "Global mean 34 - 43 km; extremes 0 - 80 km; ultra-thin ~5.4 km beneath Apollo basin rim",
+          "mars": "InSight SEIS layering: shallow interfaces at 8±2 km and 20±5 km, Moho at 39±8 km; global mean 49±17 km (5-10% porosity from fracturing/hydration)",
+          "scientific_evidence": "PREM Model (1981); GRAIL (Wieczorek et al., 2013); InSight SEIS (Knapmeyer-Endrun et al., 2021, 2025)"
+        },
+        {
+          "category": "Internal Crustal Structure",
+          "parameter": "Mantle Layering",
+          "unit": "Physical Properties & Stratification",
+          "earth": "Upper mantle (Moho - 410 km), Hydrous Transition Zone (410 - 660 km), Lower Mantle (660 - 2,891 km), D'' layer",
+          "moon": "Seismically stratified mantle: discontinuities at 20 km, 45 km, 500 km, 750 km; partially molten basal mantle zone",
+          "mars": "Silicate mantle ~1,560 km thick, FeO-enriched (~2x Earth mantle iron), density 3.4-3.5 g/cm³ per InSight; lacks thick bridgmanite layer",
+          "scientific_evidence": "PREM IRIS ds.iris.edu; Apollo Seismic Data; InSight SEIS (Liebske et al., 2025; Guinard et al., 2025)"
+        },
+        {
+          "category": "Internal Crustal Structure",
+          "parameter": "Core Dimensions & Physical State",
+          "unit": "Radius (km) & State",
+          "earth": "Core radius 3,480 km: Liquid Fe-Ni outer core (radius 2,260 km, dynamo source), Solid Fe-Ni inner core (radius 1,220 km)",
+          "moon": "Very small metallic core: Total radius ~330 km; solid inner core ~240 km, liquid outer core ~90 km; CMB at ~480 km depth",
+          "mars": "Fully liquid Fe-Ni core detected by InSight SEIS: Large radius 1,830 ± 40 km, density 6.0-6.3 g/cm³, 15-20% light elements (S, C, O, H)",
+          "scientific_evidence": "Dziewonski & Anderson (1981); Weber et al. (2011); InSight SEIS (Stähler et al., 2021; Bagheri et al., 2022)"
+        },
+        {
+          "category": "Internal Crustal Structure",
+          "parameter": "Global Dipole Magnetic Field",
+          "unit": "Gauss / Intensity",
+          "earth": "Strong active dipole field: 0.25 - 0.65 Gauss; dipole moment 7.8 x 10²² A·m²; shields surface from cosmic radiation",
+          "moon": "No present-day global dipole field; localized fossil crustal magnetic anomalies only",
+          "mars": "No global dipole field; core dynamo ceased ~4.0 Ga ago; strong remanent crustal magnetic stripes in Southern Highlands",
+          "scientific_evidence": "NOAA NCEI WMM; Apollo Magnetometer; MGS MAG/ER; InSight Fluxgate"
+        },
+        {
+          "category": "Lithosphere & Dynamic Regimes",
+          "parameter": "Geodynamic Regime",
+          "unit": "Tectonic Mechanism",
+          "earth": "Mobile Plate Tectonics: Subduction, seafloor spreading, orogeny, and continuous crustal recycling",
+          "moon": "Cold Stagnant-Lid Lithosphere: ~1,000 km thick lithosphere; deep moonquakes triggered by Earth tidal stresses",
+          "mars": "Stagnant-Lid Lithosphere (200-400 km thick); active extensional faulting at Cerberus Fossae and marsquakes recorded by InSight",
+          "scientific_evidence": "OneGeology; Breuer (2023); InSight SEIS (Knapmeyer-Endrun et al., 2025)"
+        },
+        {
+          "category": "Hydrosphere & Cryosphere",
+          "parameter": "Water Inventory & Physical States",
+          "unit": "Volume & Distribution",
+          "earth": "1,386 million km³: 97.5% liquid saline oceans, 1.74% permanent ice sheets (Greenland, Antarctica), 0.76% groundwater & vapor",
+          "moon": "No liquid water; water ice sequestered in polar Permanently Shadowed Regions (PSRs); surficial OH/H2O adsorbed on grains",
+          "mars": "No stable liquid water; water ice concentrated in Polar Layered Deposits (SPLD: 1.0-1.3M km³) and shallow subsurface ice sheets (Arcadia Planitia)",
+          "scientific_evidence": "Copernicus Marine; Liu et al. (2025 Nature Astronomy); Genova et al. (2024); Luzzi et al. (2025)"
+        },
+        {
+          "category": "Hydrosphere & Cryosphere",
+          "parameter": "Surface Hydration Dynamics",
+          "unit": "Cycle Mechanism",
+          "earth": "Closed hydrological cycle: Evapotranspiration -> Cloud condensation -> Precipitation (global mean 2.68 mm/day) -> Ocean runoff",
+          "moon": "Diurnal OH/H2O variation: increases post-sunrise, peaks near local noon at low latitudes or decreases with peak T; intensifies toward poles",
+          "mars": "Regolith-atmosphere vapor exchange: High nocturnal relative humidity in dusty regions; transient brine deliquescence at InSight & Gale sites",
+          "scientific_evidence": "CHRS PERSIANN (UCI); Chandrayaan-2 IIRS; InSight Landing Site deliquescence (Pal & Kereszturi, 2019, 2020); Fedorova et al. (2023)"
+        },
+        {
+          "category": "Atmosphere & Exosphere",
+          "parameter": "Standard Surface Atmospheric Pressure",
+          "unit": "hPa (mbar)",
+          "earth": "1,013.25 hPa (1.0 atm); ranges globally from 870 hPa (cyclone centers) to 1,085 hPa (Siberian High)",
+          "moon": "~10⁻¹⁰ hPa daytime, ~10⁻¹² hPa nighttime (Ultra-high vacuum / Surface-bound Exosphere)",
+          "mars": "6.1 hPa mean (varies 6.0 - 10.0 hPa seasonally due to polar CO2 condensation/sublimation and elevation)",
+          "scientific_evidence": "WMO Standard; Apollo SIDE/LADEE; Curiosity REMS; Perseverance MEDA; Yang et al. (2023)"
+        },
+        {
+          "category": "Atmosphere & Exosphere",
+          "parameter": "Primary Atmospheric Composition",
+          "unit": "% by Volume",
+          "earth": "78.08% N₂, 20.95% O₂, 0.93% Ar, 0.0426% CO₂ (426 ppm Mauna Loa 2026), variable H₂O (0 - 4%)",
+          "moon": "Atomic/molecular exosphere: Helium (He), Neon (Ne), Argon-40 (⁴⁰Ar), CO₂, sputtered Na/K ions, and nanodust",
+          "mars": "95.32% CO₂, 2.60% N₂, 1.90% Ar, 0.16% O₂, 0.08% CO, trace variable water vapor (100 - 250 ppm)",
+          "scientific_evidence": "NOAA GML; LADEE NMS; Chandrayaan-2 CHACE-2; Mars Science Laboratory SAM; TGO ACS"
+        },
+        {
+          "category": "Atmosphere & Exosphere",
+          "parameter": "Atmospheric Tides & Circulation Dynamics",
+          "unit": "Scale & Phenomena",
+          "earth": "Three-cell meridional circulation (Hadley, Ferrel, Polar), Jet Streams (150-300 km/h), baroclinic cyclones and weather fronts",
+          "moon": "No atmospheric circulation; direct interaction with solar wind plasma and CME shockwaves (density spikes by 1 order of magnitude)",
+          "mars": "Strong thermal tides (diurnal & semi-diurnal waves), planetary boundary layer turbulence, sharp dawn pressure peaks",
+          "scientific_evidence": "Copernicus ERA5; earth.nullschool.net; Yang et al. (2023 JGR Planets); Kleinböhl et al. (2020)"
+        },
+        {
+          "category": "Biosphere & Habitability",
+          "parameter": "Current Biosphere & Biomass",
+          "unit": "Gt Carbon & Status",
+          "earth": "~550 Gt C living biomass; pervasive across all spheres (terrestrial, marine, and deep subsurface biosphere down to 5 km)",
+          "moon": "Completely abiotic / sterilized; lacks environmental conditions to support any indigenous life",
+          "mars": "No confirmed extant biosphere; ancient paleo-habitability potential and transient subsurface micro-brine niches",
+          "scientific_evidence": "Bar-On et al. (2018); NASA HLS Antelope Valley; NASA Mars 2020 Astrobiology; Pal & Kereszturi (2017)"
+        },
+        {
+          "category": "Temperature, Weather & Climate",
+          "parameter": "Global Surface Temperature Range",
+          "unit": "K (°C)",
+          "earth": "184 K to 330 K (-89.2°C Vostok to +56.7°C Furnace Creek); Global mean ~287.55 K (+14.4°C)",
+          "moon": "30 K to 397 K (-243°C South Pole PSRs to +124°C equatorial noon); Global mean ~250 K (-23°C)",
+          "mars": "148 K to 276 K (-125°C winter poles to +20°C equatorial summer noon); Global mean ~210 K (-63°C)",
+          "scientific_evidence": "NOAA GHCN; Diviner Lunar Radiometer (Williams et al., 2017); Martinez & Siegler (2021); Munguira et al. (2023, 2024)"
+        },
+        {
+          "category": "Temperature, Weather & Climate",
+          "parameter": "Diurnal Temperature Swing",
+          "unit": "K or °C",
+          "earth": "5 - 15°C in maritime/tropical zones; 20 - 30°C in hyperarid deserts (Death Valley, Sahara)",
+          "moon": "Extreme ~290 - 300°C at the equator (dropping from +120°C lunar day to -180°C lunar night over a 29.5-day synodic cycle)",
+          "mars": "Large: typically 60 - 90°C; exceeds 100°C in low/mid-latitudes (MEDA recorded -85°C to -15°C within a single sol)",
+          "scientific_evidence": "Copernicus ERA5; Diviner (Vasavada et al.); Munguira et al. (2024 JGR Planets)"
+        },
+        {
+          "category": "Temperature, Weather & Humidity",
+          "parameter": "Atmospheric Vapor & Relative Humidity",
+          "unit": "Quantitative Index",
+          "earth": "Mean TCWV 25.0 kg/m²; surface RH 50 - 90% (tropics >80%, arid deserts 10 - 20%); global cloud cover ~67%",
+          "moon": "Unmeasurable atmospheric relative humidity (RH = 0%); transient outgassed H2O molecules only in exosphere",
+          "mars": "Low column water vapor (5 - 30 precipitable µm); nocturnal RH reaches 80-100% forming frost; daytime RH drops to <1-5%",
+          "scientific_evidence": "Copernicus ERA5; NASA AIRS; REMS-H / Curiosity; MEDA / Perseverance; Pal et al. (2019 Icarus)"
+        },
+        {
+          "category": "Dust, Aerosols & Particulates",
+          "parameter": "Dust Particle Origin & Physical Nature",
+          "unit": "Size & Physical Properties",
+          "earth": "Fluvial/aeolian weathered dust: Rounded mineral grains, organics, sea salt, soot; PM2.5/PM10; ~1,500-2,000 Mt/yr emission",
+          "moon": "Micrometeorite impact regolith: Ultra-sharp, jagged glassy shards without fluid rounding; highly abrasive and toxic to lungs",
+          "mars": "Dry wind-weathered iron oxide dust: Ultra-fine (1 - 3 µm), long atmospheric residence time; magnetic iron oxides and perchlorate salts",
+          "scientific_evidence": "AeroCom Project; NASA Saharan Plume; Apollo Lunar Soil Toxicology; Jakosky (1986); Guha & Panda (2021, 2022)"
+        },
+        {
+          "category": "Dust, Aerosols & Particulates",
+          "parameter": "Dust Storm Dynamics & Transport",
+          "unit": "Lofting Altitude & Thermal Effect",
+          "earth": "Desert dust storms (Haboobs, Saharan Air Layer): Lofted 3 - 6 km, trans-Atlantic transport; cools surface locally (AOD > 3.0)",
+          "moon": "No meteorological dust storms; dust mobilized by micrometeorite ejecta and electrostatic levitation across the day-night terminator",
+          "mars": "Regional and Global Dust Storms: Lofts dust to 25 - 50 km altitude; warms atmosphere by 10 - 30 K; blocks up to 99% of direct sunlight",
+          "scientific_evidence": "NASA MODIS; LADEE LDEX; Guha & Panda (2021, 2022); Kleinböhl et al. (2020); Montabone et al. (2020)"
+        }
+      ]
+    };
+
+    // Normalize string for case-insensitive search
+    function normalizeText(str) {
+      if (!str) return '';
+      return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    }
+
+    // Populate Table
+    function renderTable(categoryFilter, searchQuery) {
+      const tbody = document.getElementById('matrixTableBody');
+      const countBadge = document.getElementById('resultCount');
+      tbody.innerHTML = '';
+      
+      const query = searchQuery ? searchQuery.trim().toLowerCase() : '';
+      const queryNorm = normalizeText(query);
+      
+      const allMetrics = window.PLANETARY_DATA.comparative_metrics || [];
+      
+      const filtered = allMetrics.filter(item => {
+        const matchesCat = (categoryFilter === 'all') || 
+          normalizeText(item.category).includes(normalizeText(categoryFilter));
+        
+        if (!matchesCat) return false;
+        if (!query) return true;
+
+        const fullText = [
+          item.parameter,
+          item.category,
+          item.earth,
+          item.moon,
+          item.mars,
+          item.scientific_evidence
+        ].join(' ');
+
+        return fullText.toLowerCase().includes(query) || normalizeText(fullText).includes(queryNorm);
+      });
+
+      if (countBadge) {
+        countBadge.innerText = `Showing: ${filtered.length}/${allMetrics.length}`;
+      }
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="4" style="text-align:center; padding: 48px 20px; color: var(--text-muted);">
+              <div style="font-size: 15px; margin-bottom: 8px;">No metrics found matching "<strong>${searchQuery}</strong>"</div>
+              <div style="font-size: 12px; color: var(--text-dim);">Tip: Try searching for <em>InSight</em>, <em>Tianwen</em>, <em>Hurst</em>, <em>dust storm</em>, <em>regolith</em>, or click <strong>All Metrics</strong>.</div>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      filtered.forEach(m => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="param-cell">
+            <span class="param-category">${m.category}</span>
+            <strong>${m.parameter}</strong>
+            <span class="param-unit">[${m.unit}]</span>
+            <span class="evidence-badge">Source: ${m.scientific_evidence}</span>
+          </td>
+          <td style="color: #bae6fd;">${m.earth}</td>
+          <td style="color: #e2e8f0;">${m.moon}</td>
+          <td style="color: #fecdd3;">${m.mars}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // Chart.js Visualizations
+    function initCharts() {
+      if (typeof Chart === 'undefined') {
+        console.warn("Chart.js is not loaded. Skipping charts.");
+        return;
+      }
+
+      try {
+        // 1. Radar Chart
+        const ctxRadar = document.getElementById('radarChart');
+        if (ctxRadar) {
+          new Chart(ctxRadar.getContext('2d'), {
+            type: 'radar',
+            data: {
+              labels: ['Gravity', 'Atm. Pressure (log)', 'Normalized Radius', 'Crust Thickness', 'Diurnal Temp Swing', 'Moisture / Water', 'Atm. Dust Density'],
+              datasets: [
+                {
+                  label: 'Earth',
+                  data: [1.0, 1.0, 1.0, 0.70, 0.45, 1.0, 0.35],
+                  borderColor: '#38bdf8',
+                  backgroundColor: 'rgba(56, 189, 248, 0.2)',
+                  borderWidth: 2,
+                  pointBackgroundColor: '#38bdf8'
+                },
+                {
+                  label: 'Moon',
+                  data: [0.166, 0.0, 0.272, 0.82, 1.0, 0.02, 0.15],
+                  borderColor: '#cbd5e1',
+                  backgroundColor: 'rgba(203, 213, 225, 0.15)',
+                  borderWidth: 2,
+                  pointBackgroundColor: '#cbd5e1'
+                },
+                {
+                  label: 'Mars',
+                  data: [0.379, 0.25, 0.532, 1.0, 0.65, 0.15, 0.95],
+                  borderColor: '#fb7185',
+                  backgroundColor: 'rgba(251, 113, 133, 0.2)',
+                  borderWidth: 2,
+                  pointBackgroundColor: '#fb7185'
+                }
+              ]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              scales: {
+                r: {
+                  angleLines: { color: 'rgba(255, 255, 255, 0.08)' },
+                  grid: { color: 'rgba(255, 255, 255, 0.08)' },
+                  pointLabels: {
+                    color: '#94a3b8',
+                    font: { size: 11, family: 'Plus Jakarta Sans' }
+                  },
+                  ticks: { display: false, max: 1.0, min: 0 }
+                }
+              },
+              plugins: {
+                legend: {
+                  labels: { color: '#e2e8f0', font: { family: 'Plus Jakarta Sans', size: 12 } }
+                }
+              }
+            }
+          });
+        }
+
+        // 2. Temperature Bar Chart
+        const ctxTemp = document.getElementById('tempBarChart');
+        if (ctxTemp) {
+          new Chart(ctxTemp.getContext('2d'), {
+            type: 'bar',
+            data: {
+              labels: ['Earth', 'Moon', 'Mars'],
+              datasets: [
+                {
+                  label: 'Record Max (°C)',
+                  data: [56.7, 124, 20],
+                  backgroundColor: 'rgba(239, 68, 68, 0.8)',
+                  borderColor: '#ef4444',
+                  borderWidth: 1
+                },
+                {
+                  label: 'Global Mean (°C)',
+                  data: [14.4, -23, -63],
+                  backgroundColor: 'rgba(56, 189, 248, 0.8)',
+                  borderColor: '#38bdf8',
+                  borderWidth: 1
+                },
+                {
+                  label: 'Record Min (°C)',
+                  data: [-89.2, -243, -125],
+                  backgroundColor: 'rgba(99, 102, 241, 0.8)',
+                  borderColor: '#6366f1',
+                  borderWidth: 1
+                }
+              ]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              scales: {
+                y: {
+                  grid: { color: 'rgba(255, 255, 255, 0.06)' },
+                  ticks: { color: '#94a3b8', font: { family: 'JetBrains Mono' } },
+                  title: { display: true, text: 'Temperature (°C)', color: '#94a3b8' }
+                },
+                x: {
+                  grid: { display: false },
+                  ticks: { color: '#e2e8f0', font: { family: 'Plus Jakarta Sans', weight: '600' } }
+                }
+              },
+              plugins: {
+                legend: {
+                  labels: { color: '#e2e8f0', font: { family: 'Plus Jakarta Sans', size: 12 } }
+                }
+              }
+            }
+          });
+        }
+      } catch (err) {
+        console.warn("Chart rendering failed:", err);
+      }
+    }
+
+    // Export Helpers
+    function exportDataJSON() {
+      const data = window.PLANETARY_DATA;
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'Planetary_Comparative_Dataset_2026.json';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    }
+
+    function exportDataCSV() {
+      const data = window.PLANETARY_DATA;
+      let csv = 'Category,Parameter,Unit,Earth,Moon,Mars,Scientific Evidence\n';
+      data.comparative_metrics.forEach(m => {
+        const row = [
+          `"${m.category}"`,
+          `"${m.parameter}"`,
+          `"${m.unit}"`,
+          `"${m.earth.replace(/"/g, '""')}"`,
+          `"${m.moon.replace(/"/g, '""')}"`,
+          `"${m.mars.replace(/"/g, '""')}"`,
+          `"${m.scientific_evidence.replace(/"/g, '""')}"`
+        ].join(',');
+        csv += row + '\n';
+      });
+      const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'Planetary_Comparative_Dataset_2026.csv';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    }
+
+    // Initialize Dashboard
+    document.addEventListener('DOMContentLoaded', () => {
+      initCharts();
+      renderTable('all', '');
+
+      // Event Listeners for Filters
+      document.querySelectorAll('#categoryFilters .filter-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          document.querySelectorAll('#categoryFilters .filter-btn').forEach(b => b.classList.remove('active'));
+          e.target.classList.add('active');
+          const cat = e.target.getAttribute('data-cat');
+          const search = document.getElementById('searchInput').value;
+          renderTable(cat, search);
+        });
+      });
+
+      document.getElementById('searchInput').addEventListener('input', (e) => {
+        const activeBtn = document.querySelector('#categoryFilters .filter-btn.active');
+        const cat = activeBtn ? activeBtn.getAttribute('data-cat') : 'all';
+        renderTable(cat, e.target.value);
+      });
+    });
+  </script>
+ <script>
+    (function initThreeBodyCompare() {
+      if (typeof L === 'undefined') return;
+
+      // Built-in Terrestrial Planetary Analogue Stations (Earth benchmarks for Moon & Mars)
+      const earthAnalogueSites = [
+        { Name: 'Atacama Desert (Mars Analogue)', lat: -24.5000, lng: -69.2500, Temperature: 16.5, Pressure: 760, Elevation: 2400, Wind_Speed: 4.5, Humidity: 12, note: 'Hyperarid perchlorate-rich soil; Mars astrobiology & rover testbed' },
+        { Name: 'Mauna Kea / Hawaii HI-SEAS (Moon/Mars)', lat: 19.8207, lng: -155.4681, Temperature: 7.2, Pressure: 615, Elevation: 4207, Wind_Speed: 6.8, Humidity: 28, note: 'Basaltic tephra & lava tubes; lunar mare & Martian regolith analogue' },
+        { Name: 'Devon Island / Haughton Crater (Arctic)', lat: 75.4333, lng: -89.8667, Temperature: -16.0, Pressure: 1005, Elevation: 230, Wind_Speed: 5.2, Humidity: 65, note: 'Impact breccia & permafrost; polar Moon/Mars habitat analogue' },
+        { Name: 'McMurdo Dry Valleys (Antarctica)', lat: -77.4667, lng: 162.5167, Temperature: -20.0, Pressure: 985, Elevation: 350, Wind_Speed: 7.5, Humidity: 18, note: 'Coldest hyperarid desert on Earth; subsurface ground-ice analogue' },
+        { Name: 'Meteor Crater, Arizona (Impact)', lat: 35.0275, lng: -111.0225, Temperature: 14.0, Pressure: 825, Elevation: 1740, Wind_Speed: 4.1, Humidity: 25, note: 'Simple bowl-shaped impact crater; Apollo astronaut geology training site' },
+        { Name: 'Ho Chi Minh City / VNU-HCMUS (Reference)', lat: 10.7626, lng: 106.6822, Temperature: 28.5, Pressure: 1011, Elevation: 12, Wind_Speed: 2.8, Humidity: 78, note: 'Tropical sea-level Earth baseline (1.0 atm, active hydrological cycle)' }
+      ];
+
+      const dbSites = { Earth: earthAnalogueSites, Moon: [], Mars: [] };
+
+      // 1. Initialize Earth Map (Standard Web Mercator EPSG:3857 + Esri Satellite Imagery)
+      const earthMap = L.map('trekEarthMap', {
+        center: [15.0, 20.0],
+        zoom: 1,
+        minZoom: 1,
+        maxZoom: 12
+      });
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Esri World Imagery',
+        noWrap: true
+      }).addTo(earthMap);
+
+      // 2. Initialize Moon Map (NASA Trek EPSG:4326)
+      const moonMap = L.map('trekMoonMap', {
+        crs: L.CRS.EPSG4326,
+        center: [-3.5, 51.05],
+        zoom: 1,
+        minZoom: 1,
+        maxZoom: 7
+      });
+      L.tileLayer('https://trek.nasa.gov/tiles/Moon/EQ/LRO_WAC_Mosaic_Global_303ppd_v02/1.0.0/default/default028mm/{z}/{y}/{x}.jpg', {
+        attribution: 'NASA Moon Trek',
+        noWrap: true
+      }).addTo(moonMap);
+
+      // 3. Initialize Mars Map (NASA Trek EPSG:4326)
+      const marsMap = L.map('trekMarsMap', {
+        crs: L.CRS.EPSG4326,
+        center: [-3.5, 51.05],
+        zoom: 1,
+        minZoom: 1,
+        maxZoom: 7
+      });
+      L.tileLayer('https://trek.nasa.gov/tiles/Mars/EQ/Mars_Viking_MDIM21_ClrMosaic_global_232m/1.0.0/default/default028mm/{z}/{y}/{x}.jpg', {
+        attribution: 'NASA Mars Trek',
+        noWrap: true
+      }).addTo(marsMap);
+
+      const mapInstances = { Earth: earthMap, Moon: moonMap, Mars: marsMap };
+      const markerColors = { Earth: '#38bdf8', Moon: '#cbd5e1', Mars: '#fb7185' };
+      let activeMarkers = { Earth: null, Moon: null, Mars: null };
+
+      function normalizeLng(lng) {
+        return ((((lng + 180) % 360) + 360) % 360) - 180;
+      }
+
+      function calcDist(lat1, lng1, lat2, lng2) {
+        const dLat = lat1 - lat2;
+        const dLng = normalizeLng(lng1 - lng2);
+        return Math.sqrt(dLat * dLat + dLng * dLng);
+      }
+
+      function getSiteCoords(s) {
+        const lat = parseFloat(s.Latitude ?? s.latitude ?? s.lat);
+        const lng = parseFloat(s.Longitude ?? s.longitude ?? s.lng ?? s.lon);
+        return (isNaN(lat) || isNaN(lng)) ? null : { lat, lng };
+      }
+
+      function selectLocation(body, lat, rawLng, exactSite = null) {
+        const lng = normalizeLng(rawLng);
+        const mapObj = mapInstances[body];
+        const prefix = body.toLowerCase();
+
+        if (activeMarkers[body]) mapObj.removeLayer(activeMarkers[body]);
+        activeMarkers[body] = L.circleMarker([lat, lng], {
+          radius: 8,
+          color: markerColors[body],
+          fillColor: '#ffffff',
+          fillOpacity: 0.9,
+          weight: 3
+        }).addTo(mapObj);
+
+        document.getElementById(`${prefix}CoordText`).innerText = `Coords: ${lat.toFixed(4)}°, ${lng.toFixed(4)}°`;
+        document.getElementById(`cmp-${prefix}-coord`).innerText = `${lat.toFixed(4)}°, ${lng.toFixed(4)}°`;
+
+        if (body === 'Earth') {
+          document.getElementById('earthMapsLink').href = `https://earth.google.com/web/@${lat.toFixed(4)},${lng.toFixed(4)},1000a,50000d,35y,0h,0t,0r`;
+        } else {
+          document.getElementById(`${prefix}NasaLink`).href = `https://trek.nasa.gov/${prefix}/#v=0.1&x=${lng.toFixed(4)}&y=${lat.toFixed(4)}&z=3&b=${prefix}`;
+        }
+
+        // Match nearest site in dataset
+        let matched = exactSite;
+        let minDist = Infinity;
+        if (!matched && dbSites[body].length > 0) {
+          dbSites[body].forEach(s => {
+            const c = getSiteCoords(s);
+            if (!c) return;
+            const d = calcDist(lat, lng, c.lat, c.lng);
+            if (d < minDist) {
+              minDist = d;
+              matched = s;
+            }
+          });
+        }
+
+        const threshold = body === 'Earth' ? 12 : 15;
+        if (matched && (exactSite || minDist <= threshold)) {
+          const siteName = matched.Name ?? matched.name ?? matched.Site_Name ?? `Site #${matched.id}`;
+          const tag = exactSite ? (body === 'Earth' ? ' (Analogue)' : ' (DB Site)') : ` (Near ${siteName} ~${minDist.toFixed(1)}°)`;
+          document.getElementById(`cmp-${prefix}-name`).innerHTML = `<strong>${siteName}</strong><span style="color:var(--text-dim);font-size:11px;">${tag}</span>`;
+          document.getElementById(`cmp-${prefix}-temp`).innerText = matched.Temperature != null ? `${matched.Temperature} °C` : 'Not entered';
+          document.getElementById(`cmp-${prefix}-press`).innerText = matched.Pressure != null ? `${matched.Pressure} hPa` : 'Not entered';
+          document.getElementById(`cmp-${prefix}-elev`).innerText = matched.Elevation != null ? `${matched.Elevation} m` : 'Not entered';
+
+          const wind = matched.Wind_Speed != null ? `${matched.Wind_Speed} m/s` : 'N/A';
+          const hum = matched.Humidity != null ? `${matched.Humidity}%` : 'N/A';
+          document.getElementById(`cmp-${prefix}-wind`).innerText = `Wind: ${wind} | RH: ${hum}`;
+
+          if (matched.note) {
+            document.getElementById(`cmp-${prefix}-extra`).innerText = matched.note;
+          } else if (matched.extra_values && matched.extra_values.length > 0) {
+            document.getElementById(`cmp-${prefix}-extra`).innerText = matched.extra_values.map(v => `${v.name}: ${v.value} ${v.unit}`).join(' | ');
+          } else {
+            document.getElementById(`cmp-${prefix}-extra`).innerText = 'Standard telemetry record';
+          }
+        } else {
+          // Physical climate estimate by latitude when clicking outside known sites
+          document.getElementById(`cmp-${prefix}-name`).innerHTML = `<em>Global Survey Point</em> (Latitudinal model)`;
+          if (body === 'Earth') {
+            const estTemp = Math.round(30 * Math.cos(lat * Math.PI / 180) - 2);
+            document.getElementById('cmp-earth-temp').innerText = `~ ${estTemp}°C (Latitudinal mean)`;
+            document.getElementById('cmp-earth-press').innerText = `~ 1,013.25 hPa (78% N₂, 21% O₂)`;
+            document.getElementById('cmp-earth-elev').innerText = `ETOPO1 / NASADEM Grid`;
+            document.getElementById('cmp-earth-wind').innerText = `Avg 3–8 m/s | RH: 40–80%`;
+            document.getElementById('cmp-earth-extra').innerText = Math.abs(lat) > 60 ? 'Polar cryosphere / permafrost zone' : 'Active hydrological & silicate crust';
+          } else if (body === 'Moon') {
+            const estTemp = Math.round(120 * Math.cos(lat * Math.PI / 180) - 40);
+            document.getElementById('cmp-moon-temp').innerText = `~ ${estTemp}°C (Radiative estimate)`;
+            document.getElementById('cmp-moon-press').innerText = `~ 10⁻¹⁰ hPa (Exospheric vacuum)`;
+            document.getElementById('cmp-moon-elev').innerText = `LOLA DEM Dataset`;
+            document.getElementById('cmp-moon-wind').innerText = `0 m/s (Airless) | RH: 0%`;
+            document.getElementById('cmp-moon-extra').innerText = Math.abs(lat) > 75 ? 'High polar water-ice PSR potential' : 'Silicate / Ilmenite-rich regolith';
+          } else {
+            const estTemp = Math.round(-63 + 25 * Math.cos(lat * Math.PI / 180));
+            document.getElementById('cmp-mars-temp').innerText = `~ ${estTemp}°C (Climate estimate)`;
+            document.getElementById('cmp-mars-press').innerText = `~ 6.1 hPa (95.3% CO₂)`;
+            document.getElementById('cmp-mars-elev').innerText = `MOLA DEM Dataset`;
+            document.getElementById('cmp-mars-wind').innerText = `Avg 2–10 m/s | High nocturnal RH`;
+            document.getElementById('cmp-mars-extra').innerText = Math.abs(lat) > 45 ? 'Shallow subsurface water ice' : 'Iron-oxide & perchlorate regolith';
+          }
+        }
+      }
+
+      // Render Earth Analogue pins immediately
+      earthAnalogueSites.forEach(site => {
+        const marker = L.marker([site.lat, site.lng]).addTo(earthMap);
+        marker.bindTooltip(site.Name);
+        marker.on('click', (ev) => {
+          L.DomEvent.stopPropagation(ev);
+          selectLocation('Earth', site.lat, site.lng, site);
+        });
+      });
+
+      // Map click listeners for all 3 bodies
+      earthMap.on('click', (e) => selectLocation('Earth', e.latlng.lat, e.latlng.lng));
+      moonMap.on('click', (e) => selectLocation('Moon', e.latlng.lat, e.latlng.lng));
+      marsMap.on('click', (e) => selectLocation('Mars', e.latlng.lat, e.latlng.lng));
+
+      // Load Moon & Mars sites from MySQL DB
+      fetch('api/compare', { credentials: 'include' })
+        .then(r => r.json())
+        .then(data => {
+          if (!data.ok || !data.sites) return;
+          ['Moon', 'Mars'].forEach(planet => {
+            dbSites[planet] = data.sites[planet] || [];
+            const mapObj = mapInstances[planet];
+            document.getElementById(`${planet.toLowerCase()}SiteCount`).innerText = `${dbSites[planet].length} DB sites`;
+
+            dbSites[planet].forEach(site => {
+              const c = getSiteCoords(site);
+              if (!c) return;
+              const siteName = site.Name ?? site.name ?? site.Site_Name ?? `Site #${site.id}`;
+              const marker = L.marker([c.lat, c.lng]).addTo(mapObj);
+              marker.bindTooltip(siteName);
+              marker.on('click', (ev) => {
+                L.DomEvent.stopPropagation(ev);
+                selectLocation(planet, c.lat, c.lng, site);
+              });
+            });
+          });
+        })
+        .catch(() => {
+          document.getElementById('moonSiteCount').innerText = 'Live preview mode';
+          document.getElementById('marsSiteCount').innerText = 'Live preview mode';
+        });
+
+      // Pre-select 1 default site per body so the 3-way table is populated on load
+      selectLocation('Earth', earthAnalogueSites[0].lat, earthAnalogueSites[0].lng, earthAnalogueSites[0]);
+      selectLocation('Moon', -89.54, 0.0);
+      selectLocation('Mars', 18.4447, 77.4508);
+    })();
+  </script>
+</body>
+</html>

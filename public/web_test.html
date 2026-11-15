@@ -1,0 +1,1939 @@
+<!DOCTYPE html>
+<html lang="en" translate="no">
+<head>
+<meta charset="UTF-8">
+<meta name="google" content="notranslate">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Terrestrial Analog Finder · NASA Space Apps</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+/* ==== style.css (inlined) ==== */
+:root {
+  --bg:   #0e1217;
+  --pn:   #161c24;
+  --pn2:  #1e2630;
+  --ln:   #2a3340;
+  --tx:   #e7eaee;
+  --mu:   #eff1f5;
+  --moon: #8cc4e8;
+  --mars: #e0795a;
+  --ok:   #5fb98a;
+  --warn: #d9a441;
+  --bad:  #e0795a;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+}
+
+body {
+  font: 14px/1.5 'IBM Plex Sans', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--tx);
+}
+
+button, input, select, textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--moon);
+  outline-offset: 2px;
+}
+
+header {
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--ln);
+  background: var(--pn);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.mark {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: conic-gradient(var(--moon) 0 50%, var(--mars) 0);
+}
+
+.brand b {
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.brand span {
+  color: var(--mu);
+  font-size: 12px;
+}
+
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--ln);
+  background: var(--pn2);
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.btn:hover {
+  border-color: var(--mu);
+}
+
+.btn.on {
+  color: var(--ok);
+  border-color: var(--ok);
+}
+
+.btn.primary {
+  background: color-mix(in srgb, var(--moon) 15%, var(--pn2));
+  border-color: var(--moon);
+  color: var(--moon);
+  font-weight: 500;
+}
+
+.btn.primary:hover {
+  background: color-mix(in srgb, var(--moon) 25%, var(--pn2));
+}
+
+.app {
+  display: grid;
+  grid-template-columns: 400px 1fr;
+  height: calc(100dvh - 56px);
+}
+
+aside, main {
+  overflow: auto;
+  padding: 20px;
+}
+
+aside {
+  border-right: 1px solid var(--ln);
+  background: var(--pn);
+}
+
+main {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+h2 {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.tag {
+  font: 400 11px 'IBM Plex Mono', monospace;
+  color: var(--mu);
+  border: 1px solid var(--ln);
+  border-radius: 4px;
+  padding: 1px 6px;
+}
+
+.tag.ai {
+  color: var(--ok);
+  border-color: var(--ok);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 20px;
+}
+
+.chip {
+  border: 1px solid var(--ln);
+  background: none;
+  border-radius: 99px;
+  padding: 3px 11px;
+  font-size: 12px;
+  color: var(--mu);
+}
+
+.chip:hover {
+  color: var(--tx);
+  border-color: var(--mu);
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+label, .lb {
+  font-size: 12px;
+  color: var(--mu);
+  display: block;
+  margin-bottom: 4px;
+}
+
+input[type=text],
+input[type=number],
+input[type=password],
+input[type=url],
+select,
+textarea {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--ln);
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+
+input:focus, select:focus, textarea:focus {
+  border-color: var(--moon);
+  outline: 0;
+}
+
+textarea {
+  resize: vertical;
+  min-height: 84px;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.num {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 13px;
+}
+
+.seg {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.seg.role-seg {
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.seg label {
+  margin: 0;
+  cursor: pointer;
+}
+
+.seg input {
+  position: absolute;
+  opacity: 0;
+}
+
+.seg div {
+  border: 1px solid var(--ln);
+  border-radius: 6px;
+  padding: 9px 6px;
+  text-align: center;
+  color: var(--tx);
+  font-weight: 500;
+  font-size: 13px;
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  align-items: center;
+}
+
+.seg div::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--c);
+  flex: none;
+}
+
+.seg input:checked + div {
+  border-color: var(--c);
+  background: color-mix(in srgb, var(--c) 14%, transparent);
+}
+
+.seg input:focus-visible + div {
+  outline: 2px solid var(--moon);
+  outline-offset: 2px;
+}
+
+/* Expert Notice Banner - Highlighted */
+.expert-notice {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.24), rgba(234, 88, 12, 0.18));
+  border: 1px solid #f59e0b;
+  border-left: 4px solid #fbbf24;
+  box-shadow: 0 0 14px rgba(245, 158, 11, 0.22);
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin-bottom: 16px;
+  font-size: 12.5px;
+  color: #fffbeb;
+  line-height: 1.45;
+}
+.expert-notice b {
+  color: #fbbf24;
+  display: block;
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 3px;
+}
+
+/* Role Context Box */
+.role-hint {
+  margin-top: 6px;
+  padding: 7px 9px;
+  border-radius: 6px;
+  background: var(--bg);
+  border: 1px dashed var(--ln);
+  font-size: 11.5px;
+  color: #b7c2d0;
+  line-height: 1.4;
+}
+
+/* Live Fetch Box */
+.loc-fetch-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px;
+  align-items: center;
+}
+.loc-status {
+  font-size: 11.5px;
+  color: #9fb0c4;
+  margin-top: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+/* More Options Drawer */
+.more-box {
+  border: 1px solid var(--ln);
+  border-radius: 8px;
+  background: var(--bg);
+  padding: 10px 12px;
+}
+.more-toggle {
+  width: 100%;
+  background: none;
+  border: 0;
+  padding: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--moon);
+  font-weight: 600;
+  font-size: 12.5px;
+  text-align: left;
+}
+.more-toggle:hover {
+  color: #fff;
+}
+.more-body {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-top: 1px solid var(--ln);
+  padding-top: 12px;
+}
+.more-body[hidden] {
+  display: none !important;
+}
+.more-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.mchip {
+  border: 1px solid var(--ln);
+  background: var(--pn);
+  border-radius: 5px;
+  padding: 4px 8px;
+  font-size: 11.5px;
+  color: #c5cedb;
+  transition: all 0.15s;
+}
+.mchip:hover {
+  border-color: var(--moon);
+  color: #fff;
+}
+.mchip.active {
+  border-color: var(--ok);
+  background: color-mix(in srgb, var(--ok) 15%, var(--pn));
+  color: var(--ok);
+  font-weight: 500;
+}
+.extra-item {
+  background: var(--pn);
+  border: 1px solid var(--ln);
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+.extra-item-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 5px;
+  font-size: 12px;
+}
+.extra-item-head span {
+  color: var(--tx);
+  font-weight: 500;
+}
+.extra-item-head button {
+  background: none;
+  border: 0;
+  color: var(--bad);
+  font-size: 11px;
+  padding: 0 4px;
+}
+.custom-adder {
+  display: grid;
+  grid-template-columns: 1fr 90px auto;
+  gap: 6px;
+  align-items: center;
+  margin-top: 4px;
+}
+.custom-adder input {
+  padding: 6px 8px;
+  font-size: 12px;
+}
+.custom-adder select {
+  padding: 6px 6px;
+  font-size: 12px;
+}
+
+.go {
+  background: var(--tx);
+  color: var(--bg);
+  border: 0;
+  border-radius: 6px;
+  padding: 10px;
+  font-weight: 600;
+}
+
+.go:hover {
+  background: #fff;
+}
+
+.go:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+
+.hint {
+  font-size: 11px;
+  color: var(--mu);
+  margin-top: 4px;
+}
+
+#map {
+  height: 340px;
+  border: 1px solid var(--ln);
+  border-radius: 8px;
+  flex: none;
+  position: relative;
+}
+
+.leaflet-container {
+  background: var(--bg);
+}
+
+#map[data-style="dark"] .leaflet-tile-pane {
+  filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.85) saturate(0.5);
+}
+
+.map-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: -12px;
+}
+
+.map-styles {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.map-styles button {
+  border: 1px solid var(--ln);
+  background: var(--pn);
+  color: var(--mu);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+.map-styles button:hover {
+  color: var(--tx);
+  border-color: var(--mu);
+}
+
+.map-styles button.active {
+  color: var(--moon);
+  border-color: var(--moon);
+  background: color-mix(in srgb, var(--moon) 12%, var(--pn));
+}
+
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+  background: var(--pn2);
+  color: var(--tx);
+  border: 1px solid var(--ln);
+}
+
+.pin {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: 0 0 10px var(--c);
+  background: var(--c);
+}
+
+.panel {
+  background: var(--pn);
+  border: 1px solid var(--ln);
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.st {
+  display: none;
+}
+
+#res[data-s=e] .e,
+#res[data-s=l] .l {
+  display: block;
+  text-align: center;
+  padding: 36px 0;
+}
+
+#res[data-s=d] .d {
+  display: block;
+}
+
+.st h3 {
+  font-size: 16px;
+  margin-bottom: 4px;
+}
+
+.st p {
+  color: var(--mu);
+  max-width: 420px;
+  margin: auto;
+}
+
+.spin {
+  width: 34px;
+  height: 34px;
+  margin: 0 auto 14px;
+  border: 3px solid var(--ln);
+  border-top-color: var(--moon);
+  border-radius: 50%;
+  animation: s 1s linear infinite;
+}
+
+@keyframes s {
+  to { rotate: 360deg; }
+}
+
+.head {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--ln);
+  margin-bottom: 16px;
+}
+
+.head h3 {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 6px 0 2px;
+}
+
+.badge {
+  font-size: 12px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 4px;
+  margin-right: 6px;
+  background: var(--pn2);
+  color: var(--mu);
+}
+
+.ring {
+  position: relative;
+  width: 76px;
+  height: 76px;
+  flex: none;
+  text-align: center;
+}
+
+.ring svg {
+  rotate: -90deg;
+}
+
+.ring circle {
+  fill: none;
+  stroke-width: 6;
+}
+
+.ring b {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.ring small {
+  color: var(--mu);
+  font-size: 11px;
+}
+
+.meters {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.meters div {
+  font-size: 12px;
+  color: var(--mu);
+}
+
+.meters b {
+  color: var(--tx);
+  float: right;
+  font-weight: 500;
+}
+
+.bar {
+  height: 4px;
+  background: var(--pn2);
+  border-radius: 2px;
+  margin-top: 6px;
+  overflow: hidden;
+}
+
+.bar i {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: var(--moon);
+  transition: width 0.9s;
+}
+
+.md h2 {
+  font-size: 15px;
+  margin: 0 0 6px;
+  display: block;
+}
+
+.md h3 {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--moon);
+  margin: 16px 0 4px;
+}
+
+.md {
+  color: #c4ccd7;
+  max-width: 72ch;
+}
+
+.md ul {
+  margin-left: 18px;
+}
+
+.md strong {
+  color: var(--tx);
+  font-weight: 600;
+}
+
+.gal {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.card {
+  background: var(--pn);
+  border: 1px solid var(--ln);
+  border-left: 3px solid var(--c);
+  border-radius: 8px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.card .top {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--c);
+  font-weight: 500;
+}
+
+.card .top b {
+  color: var(--tx);
+  font-size: 15px;
+}
+
+.card h4 {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.card small {
+  color: var(--mu);
+  font-size: 12px;
+}
+
+.card p {
+  font-size: 12px;
+  color: #aab4c2;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.card .ft {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: auto;
+  padding-top: 8px;
+  border-top: 1px solid var(--ln);
+  font-size: 11px;
+  color: var(--mu);
+}
+
+.card .ft button {
+  background: none;
+  border: 0;
+  color: var(--moon);
+  font-size: 12px;
+}
+
+dialog {
+  background: var(--pn);
+  color: var(--tx);
+  border: 1px solid var(--ln);
+  border-radius: 10px;
+  padding: 20px;
+  width: min(400px, 92vw);
+}
+
+dialog::backdrop {
+  background: rgba(0, 0, 0, 0.7);
+}
+
+dialog h3 {
+  font-size: 15px;
+  margin-bottom: 6px;
+}
+
+dialog p {
+  color: var(--mu);
+  font-size: 13px;
+  margin-bottom: 14px;
+}
+
+dialog menu {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 0;
+  margin: 14px 0 0;
+}
+
+@media (max-width: 900px) {
+  .app {
+    display: block;
+    height: auto;
+  }
+  aside {
+    border: 0;
+    border-bottom: 1px solid var(--ln);
+  }
+  .meters {
+    grid-template-columns: 1fr;
+  }
+  .brand span {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+.tbl{width:100%;border-collapse:collapse;font-size:13px;margin-top:12px}
+.tbl th,.tbl td{padding:7px 8px;border-bottom:1px solid var(--ln);text-align:left}
+.tbl th{color:var(--mu);font-weight:500}
+.chip.on{border-color:var(--moon);color:var(--moon)}
+.chip.off{opacity:.4}
+.lst{font-size:12px;color:var(--mu);margin:8px 0}
+</style>
+</head>
+<body>
+<header>
+  <div class="nav-actions">
+    <a class="btn" href="compare.html">Compare planets</a>
+    <a class="btn" href="engine_modules.html">Engine &amp; Modules</a>
+    <span id="userInfo" style="color:var(--mu);font-size:13px"></span>
+    <a class="btn primary" href="contribute.html">+ Contribute site</a>
+    <button class="btn" id="keyBtn">Set Gemini key</button>
+    <button class="btn" id="outBtn">Sign out</button>
+  </div>
+</header>
+
+<div class="app">
+<aside>
+  <!-- HIGHLIGHTED PLATFORM NOTICE -->
+  <div class="expert-notice" role="note">
+    <b>⚡ System Note · Requirement-Based Site Matching</b>
+    This web platform evaluates your predefined criteria and mission requirements to identify the most suitable Earth analog locations for Moon and Mars exploration.
+  </div>
+
+  <h2>Presets</h2>
+  <div class="chips" id="chips"></div>
+  <h2>Analyze a site <span class="tag" id="engine">Rules engine</span></h2>
+  <form id="f">
+    <!-- USER ROLE / PERSPECTIVE SELECTION -->
+    <div>
+      <span class="lb">Analysis Perspective (Work Role)</span>
+      <div class="seg role-seg">
+        <label><input type="radio" name="role" value="engineer" checked><div style="--c:var(--moon)">Engineer</div></label>
+        <label><input type="radio" name="role" value="government"><div style="--c:var(--ok)">Government</div></label>
+        <label><input type="radio" name="role" value="enterprise"><div style="--c:var(--warn)">Enterprise</div></label>
+      </div>
+      <div class="role-hint" id="roleHint">
+        <strong>Engineer Focus:</strong> Material durability, mechanical load, regolith dust abrasion, thermal transfer &amp; rover/module operability.
+      </div>
+    </div>
+
+    <div><span class="lb">Target body</span>
+      <div class="seg">
+        <label><input type="radio" name="t" value="Moon" checked><div style="--c:var(--moon)">Moon base</div></label>
+        <label><input type="radio" name="t" value="Mars"><div style="--c:var(--mars)">Mars outpost</div></label>
+      </div></div>
+
+    <!-- EARTH LOCATION: AUTO-FETCH FROM GLOBAL DATA SOURCES -->
+    <div>
+      <label for="name">Earth location <span style="color:var(--moon)">· Auto-sync global data</span></label>
+      <div class="loc-fetch-row">
+        <input type="text" id="name" required placeholder="e.g., Atacama Desert, Devon Island, Da Lat...">
+        <button type="button" class="btn primary" id="fetchLocBtn" style="padding:8px 10px;white-space:nowrap" title="Fetch real-time climate, elevation, and population data from Open-Meteo & OpenStreetMap">🌐 Fetch data</button>
+      </div>
+      <div class="loc-status" id="locStatus">
+        <span>Coordinates &amp; climate will auto-sync from global feeds (or click on the map).</span>
+        <span class="num" id="coordBadge" style="color:var(--moon)"></span>
+      </div>
+      <!-- Hidden coordinates stored for map and weather API -->
+      <input type="hidden" id="lat">
+      <input type="hidden" id="lng">
+    </div>
+
+    <div class="row">
+      <div><label for="wind">Wind speed (km/h)</label><input class="num wx" type="number" min="0" step="any" id="wind" placeholder="12"></div>
+      <div><label for="windDir">Wind direction (°)</label><input class="num wx" type="number" min="0" max="360" step="any" id="windDir" placeholder="270"></div>
+    </div>
+    <div class="row">
+      <div><label for="pressure">Pressure (hPa)</label><input class="num wx" type="number" min="0" step="any" id="pressure" placeholder="800"></div>
+      <div><label for="elev">Elevation (m)</label><input class="num wx" type="number" step="any" id="elev" placeholder="1000"></div>
+    </div>
+    <div><label for="hTemp">24h temperature (°C) <span style="color:var(--mu)">· 24 values, comma-separated</span></label><input class="num wx" type="text" id="hTemp" placeholder="15, 14, 14, 13, …"></div>
+    <div><label for="hWind">24h wind speed (km/h) <span style="color:var(--mu)">· 24 values, comma-separated</span></label><input class="num wx" type="text" id="hWind" placeholder="4, 4, 3, 3, …"></div>
+    <div><label for="terrain">Terrain</label>
+      <select id="terrain" required>
+        <option value="" disabled selected>Select terrain…</option>
+        <option value="Impact Crater">Impact crater / breccia</option>
+        <option value="Volcanic & Basaltic">Volcanic / basaltic regolith</option>
+        <option value="Lava Tube & Cave">Lava tube / cave shelter</option>
+        <option value="Hyperarid Desert">Hyperarid desert / extreme UV</option>
+        <option value="Polar & Permafrost">Polar glacier / permafrost</option>
+        <option value="Hydrothermal & Saline">Hydrothermal / acidic saline lake</option>
+      </select></div>
+    <div><label for="feat">Geology and environment <span style="color:var(--mu)">· Optional</span></label><textarea id="feat" placeholder="Optional: minerals, radiation, permafrost, rover terrain…"></textarea></div>
+
+    <!-- MORE OPTIONS: SELECT UP TO 10 ADDITIONAL EVALUATION CRITERIA -->
+    <div class="more-box">
+      <button type="button" class="more-toggle" id="moreToggle">
+        <span>+ More options (Additional criteria)</span>
+        <span class="tag" id="extraCountTag">3/10 criteria</span>
+      </button>
+      <div class="more-body" id="moreBody" hidden>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+          <div class="hint" style="margin:0">NASA Space Apps 2026 8-Dimension Suite (max 10 criteria):</div>
+          <button type="button" class="btn primary" id="loadAll8NasaBtn" style="padding:3px 8px;font-size:11px">⚡ Select all 8 NASA criteria</button>
+        </div>
+        <div class="more-chips" id="suggestedExtraChips"></div>
+
+        <!-- Add custom criterion outside suggested list -->
+        <div class="custom-adder">
+          <input type="text" id="customExtraName" placeholder="New criterion name...">
+          <select id="customExtraDir" title="Scoring direction">
+            <option value="high">Higher = better</option>
+            <option value="low">Lower = better</option>
+          </select>
+          <button type="button" class="btn" id="addCustomExtraBtn" style="padding:6px 10px;font-size:12px">+ Add</button>
+        </div>
+
+        <!-- Input fields for selected criteria -->
+        <div id="activeExtraInputs" style="display:flex;flex-direction:column;gap:8px"></div>
+      </div>
+    </div>
+
+    <button class="go" id="go">Analyze site</button>
+  </form>
+</aside>
+
+<main>
+  <div class="map-bar">
+    <h2 style="margin:0">Global analog map <span style="font-weight:400;font-size:11.5px;color:var(--mu);margin-left:8px">(Click anywhere on the map to fetch live site data)</span></h2>
+    <div class="map-styles" id="mapStyles">
+      <button type="button" data-style="satellite">Satellite</button>
+      <button type="button" data-style="topo">Terrain</button>
+      <button type="button" data-style="windy">Windy Live</button>
+    </div>
+  </div>
+  <div id="map" data-style="satellite"></div>
+  <iframe id="windyFrame" hidden title="Windy Live Weather Map" src="https://embed.windy.com/embed.html?type=map&amp;location=coordinates&amp;metricRain=mm&amp;metricTemp=°C&amp;metricWind=km/h&amp;zoom=4&amp;overlay=wind&amp;product=ecmwf&amp;level=surface&amp;lat=-24.08&amp;lon=-69.96&amp;englishLabels=true"></iframe>
+
+  <section class="panel" id="critPanel">
+    <h2>Evaluate sites by NASA Space Apps 2026 Dimensions <span class="tag" id="critCount">0/3 selected</span></h2>
+    <p class="lst" style="margin-top:0">Standards based on the <b>8 Dimensions of Analogy</b> from NASA Space Apps 2026 (Geology, Topography, Temp/Illumination, Water/Ice, Dust/Aeolian, Biology/Isolation, Subsurface/Caves, Robotic &amp; Human Ops) + <b>Analog Fidelity vs. Breakdown Limits</b>. Select 3 criteria to rank:</p>
+    <div class="chips" id="critChips"></div>
+    <div style="overflow-x:auto"><table class="tbl" id="rank"></table></div>
+  </section>
+
+  <section class="panel" id="comparePanel">
+    <h2>Compare Earth · Moon · Mars</h2>
+    <p class="lst" style="margin-top:0">Side-by-side geology and climate comparison tool.</p>
+    <a class="btn" href="compare.html">Open the comparison tool →</a>
+  </section>
+
+  <section class="panel" id="wxPanel">
+    <h2>
+      <span>Live weather &amp; wind telemetry · <span id="wxLocName" style="color:var(--moon)">Atacama Desert (Yungay Station), Chile</span></span>
+      <span class="tag ai" id="wxStatus">NASA + Live Weather</span>
+    </h2>
+    <div class="wx-grid">
+      <div class="wx-stat">
+        <small>Temperature</small>
+        <b id="wxTemp">-- °C</b>
+        <span id="wxTempRange">Synced from global feed</span>
+      </div>
+      <div class="wx-stat">
+        <small>Wind speed &amp; direction</small>
+        <b><span id="wxWind">-- km/h</span> <span class="compass" id="wxCompass" title="Wind direction">↑</span></b>
+        <span id="wxWindDir">Direction: --</span>
+      </div>
+      <div class="wx-stat">
+        <small>Relative humidity</small>
+        <b id="wxHum">-- %</b>
+        <span id="wxHumNote">Surface aridity index</span>
+      </div>
+      <div class="wx-stat">
+        <small>Pressure &amp; elevation</small>
+        <b id="wxPress">-- hPa</b>
+        <span id="wxElev">Elevation: -- m</span>
+      </div>
+    </div>
+    <div class="wx-chart-wrap">
+      <div class="wx-chart-head">
+        <span>24-Hour Temperature (°C) &amp; Wind Speed (km/h) Forecast</span>
+        <div class="wx-legend">
+          <span><i style="background:var(--mars)"></i> Temp (°C)</span>
+          <span><i style="background:var(--moon)"></i> Wind (km/h)</span>
+        </div>
+      </div>
+      <div id="wxChartBox" style="width:100%;overflow:hidden"></div>
+    </div>
+  </section>
+
+  <section class="panel" id="res" data-s="e">
+    <div class="st e"><h3>No site analyzed yet</h3><p>Pick a preset or enter a site to get its analog match score.</p></div>
+    <div class="st l"><div class="spin"></div><h3>Analyzing site…</h3><p>Comparing against lunar and Martian reference data.</p></div>
+    <div class="st d">
+      <div class="head">
+        <div><span class="badge" id="rBody"></span><span class="badge" id="rTerr"></span><span class="badge" id="rRole"></span>
+          <h3 id="rName"></h3><div class="num" style="color:var(--mu);font-size:12px" id="rCoord"></div></div>
+        <div class="ring"><svg width="76" height="76"><circle cx="38" cy="38" r="32" stroke="var(--pn2)"/><circle id="arc" cx="38" cy="38" r="32" stroke-dasharray="201" stroke-dashoffset="201" style="transition:stroke-dashoffset .9s"/></svg><b id="score">0</b></div>
+      </div>
+      <div class="meters">
+        <div><span id="m1Lbl">Terrain fidelity</span><b id="m1"></b><div class="bar"><i></i></div></div>
+        <div><span id="m2Lbl">Mineral and regolith</span><b id="m2"></b><div class="bar"><i></i></div></div>
+        <div><span id="m3Lbl">Testing utility</span><b id="m3"></b><div class="bar"><i></i></div></div>
+      </div>
+      <div class="md" id="report"></div>
+    </div>
+  </section>
+
+  <section>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px">
+      <h2 style="margin:0">Analog catalog <span class="tag" style="margin-left:8px"><span id="total">0</span> sites</span></h2>
+      <div class="map-styles" id="catTabs">
+        <button type="button" data-f="all" class="active">All</button>
+        <button type="button" data-f="Moon">Moon</button>
+        <button type="button" data-f="Mars">Mars</button>
+      </div>
+    </div>
+    <div class="gal" id="gal"></div>
+  </section>
+</main>
+</div>
+
+<footer>
+  <div class="brand"><div class="mark" style="width:16px;height:16px"></div><span>© 2026 Terrestrial Analog Finder · NASA Space Apps Challenge</span></div>
+  <div class="footer-links">
+    <a href="web_test.html">Analyzer</a>
+    <a href="contribute.html">Contribute Site</a>
+    <a href="https://www.spaceappschallenge.org/" target="_blank" rel="noopener">NASA Space Apps ↗</a>
+  </div>
+</footer>
+
+<dialog id="keyDlg"><h3>Gemini API key</h3><p>Add a key to use Gemini, or leave it empty to use the built-in rules engine.</p>
+  <input type="password" id="keyIn" placeholder="AIzaSy…"><menu><button class="btn" id="keyClr">Clear key</button><button class="btn" id="keySave" style="background:var(--tx);color:var(--bg)">Save key</button></menu></dialog>
+<dialog id="msgDlg"><h3 id="msgT"></h3><p id="msgB"></p><menu><button class="btn" onclick="msgDlg.close()">OK</button></menu></dialog>
+
+<script>
+const $=id=>document.getElementById(id),K='nasa_gemini_api_key',C='nasa_analog_catalog',S='nasa_session';
+const nameIn=$('name'),lat=$('lat'),lng=$('lng'),wind=$('wind'),windDir=$('windDir'),pressure=$('pressure'),elev=$('elev'),hTemp=$('hTemp'),hWind=$('hWind'),terrain=$('terrain'),feat=$('feat'),
+      f=$('f'),go=$('go'),res=$('res'),chips=$('chips'),gal=$('gal'),total=$('total'),
+      keyBtn=$('keyBtn'),keyDlg=$('keyDlg'),keyIn=$('keyIn'),keySave=$('keySave'),keyClr=$('keyClr'),
+      msgDlg=$('msgDlg'),msgT=$('msgT'),msgB=$('msgB'),engine=$('engine'),
+      rBody=$('rBody'),rTerr=$('rTerr'),rRole=$('rRole'),rName=$('rName'),rCoord=$('rCoord'),
+      arc=$('arc'),score=$('score'),report=$('report'),userInfo=$('userInfo'),outBtn=$('outBtn');
+
+const API='';
+async function api(path,opt={}){
+  const o={credentials:'include',...opt};
+  if(opt.body)o.headers={'Content-Type':'application/json'};
+  const r=await fetch(API+path,o);
+  let d;try{d=await r.json()}catch{throw new Error(`The server did not answer correctly (HTTP ${r.status}). Is the server running?`)}
+  if(!r.ok)throw new Error(d.error||`Request failed (${r.status})`);
+  return d}
+const post=(path,body)=>api(path,{method:'POST',body:JSON.stringify(body)});
+
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const col=b=>b==='Moon'?'#8cc4e8':'#e0795a';
+
+// ===== NASA REFERENCE PRESETS (VERIFIED COORDINATES, GEOLOGY & 8-DIMENSION TELEMETRY) =====
+const P = {
+  atacama: {
+    chip: 'Atacama (Yungay)',
+    target: 'Mars',
+    locationName: 'Atacama Desert (Yungay Station), Chile',
+    latitude: -24.0833,
+    longitude: -69.9167,
+    humidity: 8,
+    popDensity: 0.05,
+    temp: 16.5,
+    wind: 14,
+    windDir: 215,
+    pressure: 895,
+    elevation: 990,
+    hourlyTemp: [11,10,9.5,9,8.8,9.2,11.5,14.2,17.5,20.4,22.8,24.5,25.6,26.1,25.4,24.0,21.8,19.2,16.8,15.1,13.9,12.8,12.0,11.4],
+    hourlyWind: [6,5,5,4,4,5,7,9,12,15,18,21,23,24,22,19,16,13,10,8,7,6,6,5],
+    terrainType: 'Hyperarid Desert',
+    features: 'NASA Mars Astrobiology & Viking/Curiosity analog: hyperarid nitrate-perchlorate regolith, extreme UV irradiance, <0.1% soil moisture, near-zero organic carbon.',
+    nasaDims: {
+      regolith_sim: 94, slope_deg: 3.2, rms_rough: 0.09, solar_rad: 7.4,
+      sub_ice: 2, dust_conc: 680, extremophile_idx: 92, subsurface_idx: 35, ops_readiness: 91
+    }
+  },
+  haughton: {
+    chip: 'Haughton Crater',
+    target: 'Moon',
+    locationName: 'Haughton Impact Crater, Devon Island, Canada',
+    latitude: 75.3750,
+    longitude: -89.6833,
+    humidity: 62,
+    popDensity: 0,
+    temp: -12.0,
+    wind: 19,
+    windDir: 310,
+    pressure: 992,
+    elevation: 185,
+    hourlyTemp: [-15,-15.5,-16,-16.2,-16,-15.4,-14.5,-13.2,-11.8,-10.5,-9.6,-9.0,-8.8,-9.1,-9.7,-10.5,-11.4,-12.3,-13.1,-13.8,-14.3,-14.7,-15.0,-15.2],
+    hourlyWind: [16,15,15,14,15,16,18,19,21,22,23,24,23,22,20,19,18,17,16,16,15,15,16,16],
+    terrainType: 'Impact Crater',
+    features: 'NASA Haughton-Mars/Moon Project (23 km impact structure): carbonate-rich impact breccia, shatter cones, continuous permafrost, polar desert for Artemis rover & EVA traverses.',
+    nasaDims: {
+      regolith_sim: 91, slope_deg: 6.5, rms_rough: 0.18, solar_rad: 3.1,
+      sub_ice: 78, dust_conc: 210, extremophile_idx: 84, subsurface_idx: 55, ops_readiness: 89
+    }
+  },
+  mcmurdo: {
+    chip: 'McMurdo Dry Valleys',
+    target: 'Mars',
+    locationName: 'McMurdo Dry Valleys (Beacon Valley), Antarctica',
+    latitude: -77.8333,
+    longitude: 160.6500,
+    humidity: 22,
+    popDensity: 0,
+    temp: -22.5,
+    wind: 26,
+    windDir: 195,
+    pressure: 855,
+    elevation: 1180,
+    hourlyTemp: [-26,-26.5,-27,-27.2,-27,-26.3,-25.1,-23.8,-22.2,-20.9,-19.8,-19.2,-19.0,-19.3,-20.0,-21.1,-22.3,-23.5,-24.4,-25.0,-25.5,-25.8,-26.0,-26.1],
+    hourlyWind: [22,21,20,20,21,23,25,27,29,31,32,33,31,29,28,26,25,24,23,22,22,21,22,22],
+    terrainType: 'Polar & Permafrost',
+    features: 'NASA Phoenix & Icebreaker analog: ice-free hyperarid polar desert, sublimation-lag till over ancient buried glacier ice, polygonally patterned ground & cryo-brines.',
+    nasaDims: {
+      regolith_sim: 93, slope_deg: 5.8, rms_rough: 0.15, solar_rad: 3.8,
+      sub_ice: 95, dust_conc: 320, extremophile_idx: 90, subsurface_idx: 60, ops_readiness: 82
+    }
+  },
+  lanzarote: {
+    chip: 'Lanzarote Lava Tubes',
+    target: 'Moon',
+    locationName: 'Cueva de los Verdes / Corona Lava Tube, Lanzarote, Spain',
+    latitude: 29.1608,
+    longitude: -13.4389,
+    humidity: 54,
+    popDensity: 12,
+    temp: 20.5,
+    wind: 21,
+    windDir: 40,
+    pressure: 1012,
+    elevation: 160,
+    hourlyTemp: [17.5,17.2,17.0,16.8,16.9,17.3,18.1,19.4,20.8,22.1,23.2,24.0,24.4,24.3,23.8,22.9,21.8,20.6,19.6,18.9,18.4,18.0,17.8,17.6],
+    hourlyWind: [16,15,15,14,15,16,18,20,22,24,25,26,26,25,23,21,20,18,17,17,16,16,16,16],
+    terrainType: 'Lava Tube & Cave',
+    features: 'ESA/NASA Pangaea lunar subsurface analog: 6+ km tholeiitic basaltic lava tube with skylights (jameos), stable thermal buffer, cosmic radiation & micrometeorite shielding.',
+    nasaDims: {
+      regolith_sim: 89, slope_deg: 7.4, rms_rough: 0.24, solar_rad: 5.9,
+      sub_ice: 5, dust_conc: 190, extremophile_idx: 76, subsurface_idx: 97, ops_readiness: 90
+    }
+  },
+  hiseas: {
+    chip: 'HI-SEAS Mauna Loa',
+    target: 'Mars',
+    locationName: 'HI-SEAS Habitat, Mauna Loa North Slope, Hawaii',
+    latitude: 19.5364,
+    longitude: -155.5763,
+    humidity: 32,
+    popDensity: 0.2,
+    temp: 11.2,
+    wind: 16,
+    windDir: 85,
+    pressure: 752,
+    elevation: 2490,
+    hourlyTemp: [6.5,6.0,5.6,5.3,5.2,5.8,7.4,9.8,12.1,14.0,15.4,16.2,16.5,16.1,15.2,13.9,12.1,10.4,9.1,8.2,7.6,7.1,6.8,6.6],
+    hourlyWind: [11,10,10,9,10,11,13,15,17,19,21,22,22,20,18,16,15,13,12,12,11,11,11,11],
+    terrainType: 'Volcanic & Basaltic',
+    features: 'NASA HI-SEAS planetary analog: high-altitude oxidized basaltic aa/pahoehoe lava flows, palagonitic tephra regolith, isolated crew & EVA mission operations.',
+    nasaDims: {
+      regolith_sim: 95, slope_deg: 8.1, rms_rough: 0.28, solar_rad: 6.8,
+      sub_ice: 8, dust_conc: 290, extremophile_idx: 79, subsurface_idx: 85, ops_readiness: 94
+    }
+  }
+};
+
+function updateRoleUI() {
+  const rKey = document.querySelector('input[name=role]:checked')?.value || 'engineer';
+  const cfg = ROLES[rKey];
+  $('roleHint').innerHTML = cfg.hint;
+  $('m1Lbl').textContent = cfg.meters[0];
+  $('m2Lbl').textContent = cfg.meters[1];
+  $('m3Lbl').textContent = cfg.meters[2];
+}
+document.querySelectorAll('input[name=role]').forEach(el => el.addEventListener('change', updateRoleUI));
+
+// ===== MORE OPTIONS: SELECT UP TO 10 ADDITIONAL CRITERIA (INCLUDING NASA SPACE APPS 2026 8 DIMENSIONS) =====
+const MAX_EXTRA = 10;
+const SUGGESTED_EXTRAS = [
+  { id: 'humidity', name: '4. Water, Ice & Aridity (Humidity)', unit: '%', min: 0, max: 100, better: 'low', ph: '12', dim: 'Water, Ice & Aridity' },
+  { id: 'popDensity', name: '6. Biology & Isolation (Pop/km²)', unit: '/km²', min: 0, max: 100, better: 'low', ph: '0.1', dim: 'Biology, Extremophiles & Isolation' },
+  { id: 'temp', name: '3. Temp & Illumination Extremes', unit: '°C', min: -70, max: 50, better: 'low', ph: '18', dim: 'Temperature & Illumination Extremes' },
+  { id: 'regolith_sim', name: '1. Geology, Mineralogy & Surface', unit: '0-100', min: 0, max: 100, better: 'high', ph: '85', dim: 'Geology, Mineralogy & Surface Materials' },
+  { id: 'slope_deg', name: '2. Terrain & Topography (Slope)', unit: '°', min: 0, max: 45, better: 'low', ph: '4.5', dim: 'Terrain & Topography' },
+  { id: 'rms_rough', name: '2b. Surface Roughness (RMS)', unit: 'm', min: 0, max: 1.5, better: 'low', ph: '0.12', dim: 'Terrain & Topography' },
+  { id: 'solar_rad', name: '3b. Illumination / Solar UV', unit: 'kWh/m²/d', min: 0, max: 10, better: 'high', ph: '6.5', dim: 'Temperature & Illumination Extremes' },
+  { id: 'sub_ice', name: '4b. Subsurface Ice / Permafrost', unit: '%', min: 0, max: 100, better: 'high', ph: '18', dim: 'Water, Ice & Aridity' },
+  { id: 'dust_conc', name: '5. Dust & Aeolian Processes', unit: 'µg/m³', min: 0, max: 3000, better: 'high', ph: '450', dim: 'Dust & Aeolian Processes' },
+  { id: 'extremophile_idx', name: '6b. Extremophile & Biosignatures', unit: '0-100', min: 0, max: 100, better: 'high', ph: '75', dim: 'Biology, Extremophiles & Isolation' },
+  { id: 'subsurface_idx', name: '7. Caves, Lava Tubes & Subsurface', unit: '0-100', min: 0, max: 100, better: 'high', ph: '80', dim: 'Caves, Lava Tubes & Subsurface' },
+  { id: 'ops_readiness', name: '8. Robotic & Human Ops (ISRU)', unit: '0-100', min: 0, max: 100, better: 'high', ph: '88', dim: 'Robotic & Human Operations' }
+];
+
+let selectedExtras = [
+  { ...SUGGESTED_EXTRAS[0], value: '' },
+  { ...SUGGESTED_EXTRAS[1], value: '' },
+  { ...SUGGESTED_EXTRAS[2], value: '' }
+];
+
+function getExtraVal(id) {
+  const item = selectedExtras.find(x => x.id === id);
+  if (!item || item.value === '' || item.value === null || item.value === undefined) return NaN;
+  return parseFloat(item.value);
+}
+
+function setExtraVal(id, val, autoAdd = true) {
+  let item = selectedExtras.find(x => x.id === id);
+  if (!item && autoAdd && selectedExtras.length < MAX_EXTRA) {
+    const tpl = SUGGESTED_EXTRAS.find(x => x.id === id);
+    if (tpl) {
+      item = { ...tpl, value: '' };
+      selectedExtras.push(item);
+    }
+  }
+  if (item) {
+    item.value = (val === '' || val === null || val === undefined || isNaN(val)) ? '' : String(val);
+    renderExtraUI();
+  }
+}
+
+$('loadAll8NasaBtn').onclick = () => {
+  const core8Ids = ['regolith_sim', 'slope_deg', 'temp', 'humidity', 'dust_conc', 'popDensity', 'subsurface_idx', 'ops_readiness'];
+  const currentMap = new Map(selectedExtras.map(x => [x.id, x.value]));
+  selectedExtras = core8Ids.map(id => {
+    const tpl = SUGGESTED_EXTRAS.find(x => x.id === id);
+    return { ...tpl, value: currentMap.get(id) ?? '' };
+  });
+  renderExtraUI();
+  showTelemetry(readEnv());
+};
+
+$('moreToggle').onclick = () => {
+  const body = $('moreBody');
+  const open = body.hidden;
+  body.hidden = !open;
+  $('moreToggle').firstElementChild.textContent = open ? '− More options (Additional criteria)' : '+ More options (Additional criteria)';
+};
+
+function renderExtraUI() {
+  $('extraCountTag').textContent = `${selectedExtras.length}/${MAX_EXTRA} criteria`;
+  $('extraCountTag').style.color = selectedExtras.length >= MAX_EXTRA ? 'var(--warn)' : 'var(--mu)';
+
+  $('suggestedExtraChips').innerHTML = SUGGESTED_EXTRAS.map(item => {
+    const isOn = selectedExtras.some(x => x.id === item.id);
+    return `<button type="button" class="mchip ${isOn ? 'active' : ''}" data-eid="${item.id}">${isOn ? '✓ ' : '+ '}${esc(item.name)} (${esc(item.unit)})</button>`;
+  }).join('');
+
+  $('activeExtraInputs').innerHTML = selectedExtras.map((item, idx) => `
+    <div class="extra-item">
+      <div class="extra-item-head">
+        <span>${idx + 1}. ${esc(item.name)} <small style="color:var(--mu)">(${esc(item.unit || 'score')} · ${item.better === 'low' ? 'Lower is better' : 'Higher is better'})</small></span>
+        <button type="button" data-rm="${idx}" title="Remove this criterion">✕ Remove</button>
+      </div>
+      <input class="num extra-val-in" type="number" step="any" data-idx="${idx}" value="${esc(item.value ?? '')}" placeholder="Enter value (${item.min} – ${item.max}, e.g., ${item.ph || 50})">
+    </div>
+  `).join('');
+}
+
+$('suggestedExtraChips').onclick = e => {
+  const id = e.target.dataset.eid;
+  if (!id) return;
+  const existIdx = selectedExtras.findIndex(x => x.id === id);
+  if (existIdx >= 0) {
+    selectedExtras.splice(existIdx, 1);
+  } else {
+    if (selectedExtras.length >= MAX_EXTRA) {
+      return notice('Maximum limit reached', `You can select up to ${MAX_EXTRA} additional criteria per analysis.`);
+    }
+    const tpl = SUGGESTED_EXTRAS.find(x => x.id === id);
+    if (tpl) selectedExtras.push({ ...tpl, value: '' });
+  }
+  renderExtraUI();
+  showTelemetry(readEnv());
+};
+
+$('addCustomExtraBtn').onclick = () => {
+  const rawName = $('customExtraName').value.trim();
+  if (!rawName) return notice('Missing criterion name', 'Please enter a name for the custom evaluation criterion.');
+  if (selectedExtras.length >= MAX_EXTRA) {
+    return notice('Maximum limit reached', `You can select up to ${MAX_EXTRA} additional criteria.`);
+  }
+  const dir = $('customExtraDir').value;
+  selectedExtras.push({
+    id: 'custom_' + Date.now(),
+    name: rawName,
+    unit: '0-100',
+    min: 0,
+    max: 100,
+    better: dir,
+    ph: '75',
+    value: ''
+  });
+  $('customExtraName').value = '';
+  renderExtraUI();
+};
+
+$('activeExtraInputs').onclick = e => {
+  const rm = e.target.dataset.rm;
+  if (rm !== undefined) {
+    selectedExtras.splice(Number(rm), 1);
+    renderExtraUI();
+    showTelemetry(readEnv());
+  }
+};
+
+$('activeExtraInputs').oninput = e => {
+  if (e.target.classList.contains('extra-val-in')) {
+    const idx = Number(e.target.dataset.idx);
+    if (selectedExtras[idx]) {
+      selectedExtras[idx].value = e.target.value;
+      showTelemetry(readEnv());
+    }
+  }
+};
+
+renderExtraUI();
+
+// ===== FETCH REAL-TIME GLOBAL DATA FROM LOCATION NAME OR MAP CLICK =====
+function setCoordHidden(la, ln) {
+  lat.value = isNaN(la) ? '' : Number(la).toFixed(4);
+  lng.value = isNaN(ln) ? '' : Number(ln).toFixed(4);
+  $('coordBadge').textContent = (!isNaN(la) && !isNaN(ln)) ? `${Number(la).toFixed(2)}°, ${Number(ln).toFixed(2)}°` : '';
+}
+
+// Clear hidden coordinates only when user manually edits the location text
+nameIn.addEventListener('input', () => {
+  lat.value = '';
+  lng.value = '';
+  $('coordBadge').textContent = '';
+});
+
+async function fetchGlobalSiteData(queryOrCoords) {
+  const btn = $('fetchLocBtn');
+  const st = $('locStatus').firstElementChild;
+  btn.disabled = true;
+  st.textContent = 'Fetching global climate & terrain telemetry...';
+  st.style.color = 'var(--moon)';
+
+  try {
+    let targetLat, targetLon, displayName, popEst = NaN;
+
+    if (typeof queryOrCoords === 'string') {
+      const q = queryOrCoords.trim();
+      if (!q) throw new Error('Please enter a real-world Earth location.');
+
+      const existingLat = parseFloat(lat.value);
+      const existingLng = parseFloat(lng.value);
+
+      if (!isNaN(existingLat) && !isNaN(existingLng)) {
+        // Use pre-loaded coordinates directly (from Preset or map click)
+        targetLat = existingLat;
+        targetLon = existingLng;
+        displayName = q;
+      } else {
+        // 1. Primary lookup via Open-Meteo Geocoding
+        const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=1&language=en&format=json`);
+        const geoData = await geoRes.json();
+
+        if (geoData.results && geoData.results.length) {
+          const g = geoData.results[0];
+          targetLat = g.latitude;
+          targetLon = g.longitude;
+          displayName = [g.name, g.admin1, g.country].filter(Boolean).join(', ');
+          popEst = (typeof g.population === 'number' && g.population > 0) ? +(g.population / 250).toFixed(1) : 0.2;
+        } else {
+          // 2. Fallback lookup via OpenStreetMap Nominatim (supports deserts, valleys, volcanoes, craters)
+          const nomRes = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(q)}&limit=1&accept-language=en`);
+          const nomData = await nomRes.json();
+          if (!nomData || !nomData.length) {
+            throw new Error(`Location "${q}" not found. Try clicking directly on the map.`);
+          }
+          targetLat = parseFloat(nomData[0].lat);
+          targetLon = parseFloat(nomData[0].lon);
+          displayName = nomData[0].display_name.split(',').slice(0, 3).join(',').trim();
+          popEst = 0.2;
+        }
+        nameIn.value = displayName;
+      }
+    } else {
+      targetLat = queryOrCoords.lat;
+      targetLon = queryOrCoords.lng;
+      try {
+        const revRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${targetLat}&lon=${targetLon}&accept-language=en`);
+        const revData = await revRes.json();
+        displayName = revData.display_name ? revData.display_name.split(',').slice(0, 3).join(',').trim() : `Site (${targetLat.toFixed(2)}°, ${targetLon.toFixed(2)}°)`;
+        popEst = (revData.address && (revData.address.city || revData.address.town)) ? 120 : 0.5;
+      } catch {
+        displayName = `Global Point (${targetLat.toFixed(2)}°, ${targetLon.toFixed(2)}°)`;
+        popEst = 0.5;
+      }
+      nameIn.value = displayName;
+    }
+
+    setCoordHidden(targetLat, targetLon);
+
+    const wxUrl = `https://api.open-meteo.com/v1/forecast?latitude=${targetLat}&longitude=${targetLon}&current=temperature_2m,relative_humidity_2m,surface_pressure,wind_speed_10m,wind_direction_10m&hourly=temperature_2m,wind_speed_10m&forecast_days=1`;
+    const wxRes = await fetch(wxUrl);
+    const wxData = await wxRes.json();
+
+    if (wxData.current) {
+      const cur = wxData.current;
+      wind.value = cur.wind_speed_10m ?? '';
+      windDir.value = cur.wind_direction_10m ?? '';
+      pressure.value = cur.surface_pressure ?? '';
+      elev.value = wxData.elevation ?? '';
+
+      setExtraVal('temp', cur.temperature_2m, true);
+      setExtraVal('humidity', cur.relative_humidity_2m, true);
+      if (!isNaN(popEst)) setExtraVal('popDensity', popEst, true);
+    }
+
+    if (wxData.hourly && Array.isArray(wxData.hourly.temperature_2m)) {
+      const t24 = wxData.hourly.temperature_2m.slice(0, 24).map(v => Math.round(v * 10) / 10);
+      const w24 = (wxData.hourly.wind_speed_10m || []).slice(0, 24).map(v => Math.round(v * 10) / 10);
+      hTemp.value = t24.join(', ');
+      hWind.value = w24.join(', ');
+    }
+
+    if (map) map.flyTo([targetLat, targetLon], 5);
+    $('wxStatus').textContent = 'Global live data';
+    showTelemetry(readEnv(), displayName);
+    st.textContent = `✓ Synced live global data for ${displayName}`;
+    st.style.color = 'var(--ok)';
+  } catch (err) {
+    st.textContent = `⚠ ${err.message}`;
+    st.style.color = 'var(--bad)';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+$('fetchLocBtn').onclick = () => fetchGlobalSiteData(nameIn.value);
+nameIn.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    fetchGlobalSiteData(nameIn.value);
+  }
+});
+
+let map,cat=[];
+const getKey=()=>{try{return localStorage.getItem(K)||''}catch{return''}};
+const notice=(t,m)=>{msgT.textContent=t;msgB.textContent=m;msgDlg.showModal()};
+
+function keyUI(){const k=getKey();
+  keyBtn.textContent=k?'Gemini key active':'Set Gemini key';keyBtn.classList.toggle('on',!!k);
+  engine.textContent=k?'Gemini 2.5':'Rules engine';engine.classList.toggle('ai',!!k)}
+keyBtn.onclick=()=>{keyIn.value=getKey();keyDlg.showModal()};
+keySave.onclick=()=>{const v=keyIn.value.trim();try{if(v)localStorage.setItem(K,v)}catch{}keyDlg.close();keyUI()};
+keyClr.onclick=()=>{try{localStorage.removeItem(K)}catch{}keyDlg.close();keyUI()};
+
+chips.innerHTML=Object.entries(P).map(([k,p])=>`<button type="button" class="chip" data-k="${k}">${p.chip}</button>`).join('');
+chips.onclick = async e => {
+  const k = e.target.dataset.k;
+  const p = P[k];
+  if (!p) return;
+
+  [...chips.children].forEach(b => b.classList.toggle('on', b.dataset.k === k));
+
+  document.querySelector(`input[name=t][value=${p.target}]`).checked = true;
+  nameIn.value = p.locationName;
+  setCoordHidden(p.latitude, p.longitude);
+  wind.value = p.wind;
+  windDir.value = p.windDir;
+  pressure.value = p.pressure;
+  elev.value = p.elevation;
+  hTemp.value = (p.hourlyTemp || []).join(', ');
+  hWind.value = (p.hourlyWind || []).join(', ');
+  terrain.value = p.terrainType;
+  feat.value = p.features;
+
+  setExtraVal('humidity', p.humidity, true);
+  setExtraVal('popDensity', p.popDensity, true);
+  setExtraVal('temp', p.temp, true);
+  if (p.nasaDims) {
+    Object.entries(p.nasaDims).forEach(([dimKey, dimVal]) => {
+      if (selectedExtras.some(x => x.id === dimKey)) {
+        setExtraVal(dimKey, dimVal, false);
+      }
+    });
+  }
+
+  if (map) map.flyTo([p.latitude, p.longitude], 5);
+  showTelemetry(readEnv(), p.locationName);
+
+  const st = $('locStatus').firstElementChild;
+  st.textContent = `✓ Loaded NASA reference profile for ${p.locationName} (syncing live weather...)`;
+  st.style.color = 'var(--moon)';
+
+  try {
+    const wxUrl = `https://api.open-meteo.com/v1/forecast?latitude=${p.latitude}&longitude=${p.longitude}&current=temperature_2m,relative_humidity_2m,surface_pressure,wind_speed_10m,wind_direction_10m&hourly=temperature_2m,wind_speed_10m&forecast_days=1`;
+    const wxRes = await fetch(wxUrl);
+    const wxData = await wxRes.json();
+    if (wxData.current) {
+      wind.value = wxData.current.wind_speed_10m ?? p.wind;
+      windDir.value = wxData.current.wind_direction_10m ?? p.windDir;
+      pressure.value = wxData.current.surface_pressure ?? p.pressure;
+      setExtraVal('temp', wxData.current.temperature_2m ?? p.temp, true);
+      setExtraVal('humidity', wxData.current.relative_humidity_2m ?? p.humidity, true);
+    }
+    if (wxData.hourly?.temperature_2m?.length >= 24) {
+      hTemp.value = wxData.hourly.temperature_2m.slice(0, 24).map(v => Math.round(v * 10) / 10).join(', ');
+      hWind.value = wxData.hourly.wind_speed_10m.slice(0, 24).map(v => Math.round(v * 10) / 10).join(', ');
+    }
+    $('wxStatus').textContent = 'NASA + Live Weather';
+    showTelemetry(readEnv(), p.locationName);
+    st.textContent = `✓ NASA geology + live weather synced for ${p.locationName}`;
+    st.style.color = 'var(--ok)';
+  } catch {
+    $('wxStatus').textContent = 'NASA Reference';
+    st.textContent = `✓ Loaded NASA reference data for ${p.locationName}`;
+    st.style.color = 'var(--ok)';
+  }
+};
+
+const dirs=['N','NE','E','SE','S','SW','W','NW'];
+const degToDir=d=>dirs[Math.round(((d%360)+360)%360/45)%8];
+const num=el=>parseFloat(el.value);
+const list=el=>el.value.split(',').map(v=>parseFloat(v)).filter(v=>!isNaN(v)).slice(0,24);
+const readEnv=()=>({
+  humidity:getExtraVal('humidity'),
+  popDensity:getExtraVal('popDensity'),
+  temp:getExtraVal('temp'),
+  wind:num(wind),
+  windDir:num(windDir),
+  pressure:num(pressure),
+  elevation:num(elev),
+  hourlyTemp:list(hTemp),
+  hourlyWind:list(hWind)
+});
+const wxMapUrl=(la,ln)=>`https://embed.windy.com/embed.html?type=map&location=coordinates&metricRain=mm&metricTemp=°C&metricWind=km/h&zoom=5&overlay=wind&product=ecmwf&level=surface&lat=${la}&lon=${ln}&detailLat=${la}&detailLon=${ln}&marker=true&englishLabels=true`;
+const show=(v,u)=>isNaN(v)?`-- ${u}`:`${v} ${u}`;
+
+function showTelemetry(d,title){
+  $('wxLocName').textContent=title||nameIn.value.trim()||'Your site';
+  $('wxTemp').textContent=show(d.temp,'°C');
+  $('wxWind').textContent=show(d.wind,'km/h');
+  const deg=isNaN(d.windDir)?0:d.windDir;
+  $('wxCompass').style.transform=`rotate(${deg}deg)`;
+  $('wxWindDir').textContent=isNaN(d.windDir)?'Direction: --':`Direction: ${deg}° (${degToDir(deg)})`;
+  $('wxHum').textContent=show(d.humidity,'%');
+  $('wxHumNote').textContent=isNaN(d.humidity)?'Surface aridity index':d.humidity<=20?'Hyperarid · Optimal analog':d.humidity<=45?'Low moisture · Suitable':'Moderate/High humidity';
+  $('wxPress').textContent=show(d.pressure,'hPa');
+  $('wxElev').textContent=`Elevation: ${show(d.elevation,'m')}`;
+  const t=d.hourlyTemp||[],w=d.hourlyWind||[];
+  if(t.length>=2){
+    $('wxTempRange').textContent=`24h min/max: ${Math.min(...t)}°C / ${Math.max(...t)}°C`;
+    drawWxChart(t,w,[]);
+  }else{
+    $('wxTempRange').textContent='Global telemetry';
+    $('wxChartBox').innerHTML='<div style="color:var(--mu);font-size:13px;padding:18px 0;text-align:center">Click "Fetch data" or enter 24 hourly temperature values to render the chart.</div>';
+  }
+}
+function drawWxChart(temps,winds,times){
+  const W=680,H=130,padL=28,padR=28,padT=18,padB=24,cw=W-padL-padR,ch=H-padT-padB;
+  const tMin=Math.min(...temps)-2,tMax=Math.max(...temps)+2,tSpan=Math.max(1,tMax-tMin);
+  const wMax=Math.max(10,...winds)*1.15;
+  const xAt=i=>padL+(i/(temps.length-1))*cw;
+  const yTemp=v=>padT+ch-((v-tMin)/tSpan)*ch;
+  const yWind=v=>padT+ch-(v/wMax)*ch;
+
+  const tPts=temps.map((v,i)=>`${xAt(i).toFixed(1)},${yTemp(v).toFixed(1)}`).join(' ');
+  const wBars=winds.map((v,i)=>{
+    const x=xAt(i)-5,y=yWind(v),h=padT+ch-y;
+    return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="10" height="${h.toFixed(1)}" rx="2" fill="var(--moon)" opacity="0.25"><title>${times[i]?.slice(11,16)||i+':00'} · Wind: ${v} km/h, Temp: ${temps[i]}°C</title></rect>`;
+  }).join('');
+  const labels=temps.map((v,i)=>i%3===0?`<text x="${xAt(i).toFixed(1)}" y="${H-6}" fill="var(--mu)" font-size="10" text-anchor="middle" font-family="IBM Plex Mono">${(times[i]?.slice(11,16))||(i+':00')}</text><text x="${xAt(i).toFixed(1)}" y="${(yTemp(v)-6).toFixed(1)}" fill="var(--tx)" font-size="10" text-anchor="middle" font-family="IBM Plex Mono">${Math.round(v)}°</text>`:'').join('');
+
+  $('wxChartBox').innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" style="display:block">
+    <line x1="${padL}" y1="${padT+ch}" x2="${W-padR}" y2="${padT+ch}" stroke="var(--ln)" stroke-width="1"/>
+    ${wBars}
+    <polyline fill="none" stroke="var(--mars)" stroke-width="2.2" points="${tPts}"/>
+    ${temps.map((v,i)=>`<circle cx="${xAt(i).toFixed(1)}" cy="${yTemp(v).toFixed(1)}" r="3" fill="var(--mars)"/>`).join('')}
+    ${labels}
+  </svg>`;
+}
+
+document.querySelectorAll('.wx').forEach(el=>el.addEventListener('input',()=>showTelemetry(readEnv())));
+
+function scoreExtras(extras) {
+  const valid = extras.filter(x => x.value !== '' && !isNaN(parseFloat(x.value)));
+  if (!valid.length) return { bonus: 0, list: [] };
+  const scored = valid.map(x => {
+    const v = parseFloat(x.value);
+    const span = Math.max(0.0001, (x.max ?? 100) - (x.min ?? 0));
+    const norm01 = Math.min(1, Math.max(0, (v - (x.min ?? 0)) / span));
+    const pct = Math.round((x.better === 'low' ? 1 - norm01 : norm01) * 100);
+    return { ...x, numVal: v, pct };
+  });
+  const avgPct = scored.reduce((a, b) => a + b.pct, 0) / scored.length;
+  const bonus = Math.round((avgPct - 50) * 0.24);
+  return { bonus, list: scored };
+}
+
+function offline(d){
+  const moon=d.target==='Moon',t=(d.features+' '+d.terrainType).toLowerCase(),has=(...w)=>w.some(x=>t.includes(x));
+  const role=d.role||'engineer';
+  let s=66,utilBonus=0;
+  if(moon){if(has('crater','impact','breccia'))s+=14;if(has('lava tube','cave'))s+=16;if(has('basalt','regolith'))s+=12}
+  else{if(has('hyperarid','desert','uv'))s+=14;if(has('permafrost','ice','brine'))s+=13;if(has('perchlorate','oxide','iron'))s+=12}
+
+  if(!isNaN(d.humidity)){
+    if(d.humidity<=20)s+=8;
+    else if(d.humidity<=45)s+=3;
+    else if(d.humidity>65)s-=8;
+  }
+
+  if(!isNaN(d.popDensity)){
+    if(d.popDensity<=1){s+=8;utilBonus+=6}
+    else if(d.popDensity<=15){s+=4;utilBonus+=3}
+    else if(d.popDensity>100){s-=10;utilBonus-=12}
+  }
+
+  if(role==='engineer'){
+    if(has('basalt','regolith','lava tube','breccia','permafrost'))s+=3;
+    if(!isNaN(d.wind)&&d.wind>45)s-=4;
+  }else if(role==='government'){
+    if(!isNaN(d.popDensity)&&d.popDensity<=1){s+=4;utilBonus+=4}
+    else if(!isNaN(d.popDensity)&&d.popDensity>20)s-=6;
+  }else if(role==='enterprise'){
+    if(!isNaN(d.elevation)&&d.elevation<2500){s+=3;utilBonus+=4}
+    if(!isNaN(d.popDensity)&&d.popDensity>0.5&&d.popDensity<=30)utilBonus+=3;
+  }
+
+  const extraOnly = (d.extraCriteria||[]).filter(x => !['humidity','popDensity','temp'].includes(x.id));
+  const extraEval = scoreExtras(extraOnly);
+  s += extraEval.bonus;
+
+  s=Math.min(98,Math.max(40,s));
+  const humStr=!isNaN(d.humidity)?`${d.humidity}% (${d.humidity<=20?'Hyperarid / Optimal':d.humidity<=45?'Low / Suitable':'High moisture interference'})`:'Not specified';
+  const popStr=!isNaN(d.popDensity)?`${d.popDensity} /km² (${d.popDensity<=1?'Remote & uninhabited / Ideal isolation':d.popDensity<=15?'Low human interference':'High urbanization interference'})`:'Not specified';
+
+  const roleSection = role==='engineer' ? `
+### 3. In-Depth Analysis for Engineers (Engineering & Hardware)
+* **Mechanical Stress & Mobility:** Evaluates rover wheel traction, regolith sinkage, and slope climbing performance across **${d.terrainType}** terrain.
+* **Thermal Dissipation & Fine Dust:** Temperature of ${isNaN(d.temp)?'N/A':d.temp+' °C'} and pressure of ${isNaN(d.pressure)?'N/A':d.pressure+' hPa'} require dust-seal validation for bearings and LiDAR/IMU sensors.
+* **ISRU Field Testing:** Assesses bedrock hardness and drilling feasibility for in-situ resource utilization.`
+  : role==='government' ? `
+### 3. In-Depth Analysis for Government (Policy, Safety & Planning)
+* **Test Zone Safety & Isolation:** Population density of ${popStr} defines launch/test safety corridors and mission data security.
+* **Zoning & Geological Conservation:** Recommends designating planetary analog heritage zones for long-term national research.
+* **International Standards & Cooperation:** Suitable as an international benchmark testbed for bilateral space programs.`
+  : `
+### 3. In-Depth Analysis for Enterprise (Commercial, Cost & Logistics)
+* **OPEX/CAPEX Optimization:** Elevation of ${isNaN(d.elevation)?'N/A':d.elevation+' m'} and local climate conditions directly impact equipment transport costs and crew maintenance.
+* **Supply Chain & Access Infrastructure:** Evaluates logistical connectivity, local power availability, and R&D deployment timelines.
+* **ISRU Commercialization Potential:** Scalability for space mineral extraction and off-world construction materials.`;
+
+  const allScoredExtras = scoreExtras(d.extraCriteria||[]).list;
+  const extraSection = allScoredExtras.length ? `
+### 4. Evaluation of Additional Criteria in More Options (${allScoredExtras.length}/10 criteria)
+${allScoredExtras.map(x=>`* **${x.name}:** ${x.numVal} ${x.unit} → Match score: **${x.pct}%** (${x.better==='low'?'Lower values preferred':'Higher values preferred'})`).join('\n')}` : '';
+
+  const breakdownNote = moon
+    ? 'Earth gravity (1g vs. 0.165g Moon), dense atmosphere (vs. lunar vacuum), magnetic field & radiation shielding cannot be reproduced locally.'
+    : 'Earth gravity (1g vs. 0.38g Mars), higher atmospheric pressure (>700 hPa vs. ~6 hPa Mars), O₂ content, and magnetosphere differ from Martian surface.';
+
+  return{score:s,terrainFidelity:Math.min(99,s+3),mineralFidelity:Math.min(98,s-2),testUtility:Math.min(99,Math.max(40,s+4+utilBonus)),report:`
+## NASA Space Apps 2026 · Terrestrial Analog Evaluation (${ROLES[role].label})
+### 1. Strong Analog Dimensions (NASA 8-Dimension Framework)
+The candidate site **${d.locationName}** achieves **${s}%** composite analog score for **${d.target} Base / Outpost** (${ROLES[role].label}).
+* **Geology, Mineralogy & Terrain:** ${d.terrainType} — ${moon?'simulates lunar highlands anorthosite, impact breccia, or mare basaltic regolith.':'simulates Martian iron-oxide regolith, sulfates, and paleolake sediments.'}
+* **Water, Ice & Aridity:** Humidity ${humStr} (evaluates hyperaridity or subsurface permafrost/brine potential).
+* **Temperature, Wind & Pressure:** ${isNaN(d.temp)?'N/A':d.temp+' °C'} · Wind ${isNaN(d.wind)?'N/A':d.wind+' km/h'} · Pressure ${isNaN(d.pressure)?'N/A':d.pressure+' hPa'} at ${isNaN(d.elevation)?'N/A':d.elevation+' m'}.
+* **Operations & Isolation:** Population density ${popStr} (assesses robotic mobility, human habitats, and field-test isolation).
+* **Target Counterpart:** ${moon?'Lunar South Pole (Shackleton Rim / Malapert Mountain)':'Martian Paleolakes (Jezero Crater) & Valles Marineris'}.
+
+### 2. Where the Analogy Breaks Down (Earth Limits)
+* **Physical Limitations:** ${breakdownNote}
+* **Mitigation:** Hardware tests here validate regolith mechanics, thermal-dust seals, and autonomous navigation, while vacuum/radiation/1-6g or 3-8g effects require chamber/numerical simulation.
+${roleSection}${extraSection}`}}
+
+async function gemini(d,k){
+  const roleCfg=ROLES[d.role||'engineer'];
+  const extraStr=(d.extraCriteria||[]).filter(x=>x.value!==''&&!isNaN(parseFloat(x.value))).map(x=>`${x.name}: ${x.value} ${x.unit} (${x.better==='low'?'lower is better':'higher is better'})`).join(', ');
+  const envExtra=`wind: ${!isNaN(d.wind)?d.wind+' km/h':'N/A'}, pressure: ${!isNaN(d.pressure)?d.pressure+' hPa':'N/A'}, elevation: ${!isNaN(d.elevation)?d.elevation+' m':'N/A'}${extraStr?', selected criteria (including humidity/pop/temp): ['+extraStr+']':''}`;
+  const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${k}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+    contents:[{parts:[{text:`Evaluate Earth analog site '${d.locationName}' (${d.terrainType}, ${envExtra}, features: ${d.features||'Not specified'}) for ${d.target} Base mission from the perspective of ${roleCfg.label}. Write the report in English with technical precision.`}]}],
+    systemInstruction:{parts:[{text:`You are a NASA Planetary Expert for the 2026 NASA Space Apps Challenge "Identify Earth Locations that Analog the Permanent Moon Base Locations and Mars", advising a ${roleCfg.promptFocus} Evaluate across NASA's 8 analog dimensions (geology/mineralogy, topography, temperature/illumination, water/ice, dust/aeolian processes, biology/isolation, caves/subsurface, robotic/human ops) AND explicitly state where the analogy breaks down (Earth gravity, atmosphere, radiation limits). Output strictly JSON with keys: score (int 0-100), terrainFidelity (int 0-100), mineralFidelity (int 0-100), testUtility (int 0-100), report (markdown string).`}]},
+    generationConfig:{responseMimeType:'application/json'}})});
+  if(!r.ok)throw new Error('API call failed '+r.status);
+  return JSON.parse((await r.json()).candidates[0].content.parts[0].text)}
+
+const md=s=>esc(s.trim())
+  .replace(/^### (.*$)/gim,'<h3>$1</h3>')
+  .replace(/^## (.*$)/gim,'<h2>$1</h2>')
+  .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
+  .replace(/^[*-] (.*$)/gim,'<ul><li>$1</li></ul>')
+  .replace(/<\/ul>\s*<ul>/g,'')
+  .replace(/^(?!<[hu/]|<li>)(.+)$/gim,'<p>$1</p>');
+
+f.onsubmit=async e=>{
+  e.preventDefault();
+  const roleVal=document.querySelector('input[name=role]:checked')?.value||'engineer';
+  if(nameIn.value.trim() && (isNaN(parseFloat(lat.value)) || isNaN(parseFloat(lng.value)))){
+    await fetchGlobalSiteData(nameIn.value.trim());
+  }
+  const d={
+    role:roleVal,
+    target:f.t.value,
+    locationName:nameIn.value.trim(),
+    latitude:parseFloat(lat.value),
+    longitude:parseFloat(lng.value),
+    humidity:getExtraVal('humidity'),
+    popDensity:getExtraVal('popDensity'),
+    temp:getExtraVal('temp'),
+    wind:num(wind),
+    windDir:num(windDir),
+    pressure:num(pressure),
+    elevation:num(elev),
+    hourlyTemp:list(hTemp),
+    hourlyWind:list(hWind),
+    terrainType:terrain.value,
+    features:feat.value.trim(),
+    extraCriteria:selectedExtras.map(x=>({...x}))
+  };
+  res.dataset.s='l';go.disabled=true;
+  try{
+    let r;const k=getKey();
+    if(k){try{r=await gemini(d,k)}catch{r=offline(d)}}else{await new Promise(t=>setTimeout(t,800));r=offline(d)}
+    const sc=parseInt(r.score)||75,ok=!isNaN(d.latitude)&&!isNaN(d.longitude),c=col(d.target);
+    const roleCfg=ROLES[roleVal];
+    rBody.textContent=d.target+' base';rBody.style.cssText=`color:${c};background:${c}22`;
+    rTerr.textContent=d.terrainType;
+    rRole.textContent=roleCfg.label;rRole.style.cssText=`color:${roleCfg.color};background:color-mix(in srgb, ${roleCfg.color} 15%, var(--pn2))`;
+    rName.textContent=d.locationName;
+    const coordParts=[];
+    if(ok)coordParts.push(`${d.latitude.toFixed(2)}°, ${d.longitude.toFixed(2)}°`);
+    if(!isNaN(d.humidity))coordParts.push(`Humidity: ${d.humidity}%`);
+    if(!isNaN(d.popDensity))coordParts.push(`Pop: ${d.popDensity}/km²`);
+    if(!isNaN(d.temp))coordParts.push(`Temp: ${d.temp}°C`);
+    if(d.extraCriteria.length)coordParts.push(`${d.extraCriteria.length} optional criteria`);
+    rCoord.textContent=coordParts.join(' · ');
+    [r.terrainFidelity||85,r.mineralFidelity||80,r.testUtility||90].forEach((v,i)=>{
+      const m=$('m'+(i+1));m.textContent=v+'%';m.nextElementSibling.firstChild.style.width='0';
+      setTimeout(()=>m.nextElementSibling.firstChild.style.width=v+'%',50)});
+    report.innerHTML=md(r.report);
+    res.dataset.s='d';
+    const col2=sc>80?'var(--ok)':sc>60?'var(--warn)':'var(--bad)';
+    arc.style.stroke=col2;score.textContent=sc;
+    setTimeout(()=>arc.style.strokeDashoffset=201-201*sc/100,50);
+    const entry={...d,score:sc,timestamp:Date.now()};
+    const idx=cat.findIndex(x=>isSameSite(x,entry));
+    if(idx>=0)entry.id=cat[idx].id;
+    let saved=entry;
+    try{saved=await saveSite(entry)}catch(er){notice('Not saved to the database',er.message)}
+    if(idx>=0)cat[idx]={...cat[idx],...saved};else cat.unshift(saved);
+    if(ok){
+      map.flyTo([d.latitude,d.longitude],5);
+    }
+    showTelemetry(d,d.locationName);
+    if(catFilter!=='all'&&catFilter!==d.target){
+      catFilter='all';
+      [...$('catTabs').children].forEach(b=>b.classList.toggle('active',b.dataset.f==='all'));
+    }
+    draw();
+  }catch(err){notice('Analysis failed',err.message);res.dataset.s='e'}
+  finally{go.disabled=false}};
+
+let catFilter='all';
+$('catTabs').onclick=e=>{
+  const f=e.target.dataset.f;if(!f)return;
+  catFilter=f;
+  [...$('catTabs').children].forEach(b=>b.classList.toggle('active',b.dataset.f===f));
+  draw();
+};
+const hasCoord=s=>s&&s.latitude!==null&&s.latitude!==''&&s.longitude!==null&&s.longitude!==''&&!isNaN(Number(s.latitude))&&!isNaN(Number(s.longitude));
+function isSameSite(a,b){
+  const na=(a.locationName||'').trim().toLowerCase(),nb=(b.locationName||'').trim().toLowerCase();
+  if(!na||!nb||na!==nb)return false;
+  if(hasCoord(a)&&hasCoord(b)){
+    return Math.abs(Number(a.latitude)-Number(b.latitude))<0.05&&Math.abs(Number(a.longitude)-Number(b.longitude))<0.05;
+  }
+  return true;
+}
+function dedupeCat(list){
+  const out=[];
+  for(const item of list){
+    if(item&&item.locationName&&!out.some(x=>isSameSite(x,item)))out.push(item);
+  }
+  return out;
+}
+const NUMK=['latitude','longitude','humidity','popDensity','temp','wind','windDir','pressure','elevation'];
+const fromServer=x=>{NUMK.forEach(k=>{if(x[k]===null||x[k]===undefined)x[k]=NaN});return x};
+async function saveSite(entry){const d=await post('api/sites',entry);return fromServer(d.site)}
+
+async function load(){
+  try{
+    const [s,d]=await Promise.all([api('api/sites?target=all'),api('api/data')]);
+    cat=s.sites.map(fromServer);
+    for(const p of Object.values(P)){
+      const def={...p,score:p.target==='Mars'?94:92};delete def.chip;delete def.nasaDims;
+      if(!cat.some(x=>isSameSite(x,def)))cat.push(await saveSite(def));
+    }
+    customCrit=d.types.filter(t=>!CRITERIA.some(c=>c.k===t.k));
+    customMaps=d.maps;
+    d.values.forEach(v=>{const site=cat.find(x=>x.target===v.target&&x.id===v.siteId);if(site)site[v.key]=v.value});
+    sel=sel.filter(k=>allCrit().some(c=>c.k===k));
+  }catch(e){notice('Cannot load data',e.message)}
+  addMapButtons();renderCrit();draw()}
+function draw(){
+  const list=cat.map((c,i)=>({c,i})).filter(({c})=>catFilter==='all'||c.target===catFilter);
+  total.textContent=list.length;
+  gal.innerHTML=list.map(({c,i})=>`<article class="card" style="--c:${col(c.target)}">
+    ${c.image?`<img class="card-img" src="${c.image}" alt="${esc(c.locationName)}">`:''}
+    <div class="top"><span>${c.target} base</span><b>${c.score}%</b></div>
+    <h4>${esc(c.locationName)}</h4><small>${esc(c.terrainType)}${c.contributor?` · By ${esc(c.contributor)}`:''}</small><p>${esc(c.features)}</p>
+    <div class="ft"><span>Logged ${new Date(c.timestamp).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</span>${!isNaN(c.latitude)&&!isNaN(c.longitude)?`<button data-i="${i}">Show on map</button>`:''}</div></article>`).join('');
+  renderRank();drawPins()}
+gal.onclick=e=>{const c=cat[e.target.dataset.i];if(c){map.flyTo([c.latitude,c.longitude],6);showTelemetry({humidity:c.humidity,temp:c.temp,wind:c.wind,windDir:c.windDir,pressure:c.pressure,elevation:c.elevation,hourlyTemp:c.hourlyTemp,hourlyWind:c.hourlyWind},c.locationName);scrollTo({top:0});$('map').scrollIntoView({behavior:'smooth',block:'nearest'})}};
+
+const TERRAIN_FIT={
+  Moon:{'Impact Crater':100,'Lava Tube & Cave':100,'Volcanic & Basaltic':90,'Polar & Permafrost':60,'Hyperarid Desert':40,'Hydrothermal & Saline':20},
+  Mars:{'Hyperarid Desert':100,'Polar & Permafrost':95,'Hydrothermal & Saline':85,'Volcanic & Basaltic':80,'Impact Crater':70,'Lava Tube & Cave':60}};
+const CRITERIA=[
+  {k:'terrain',label:'1. Geology, Mineralogy & Surface',unit:'%',min:0,max:100,better:'high',get:s=>TERRAIN_FIT[s.target]?.[s.terrainType]??NaN},
+  {k:'elevation',label:'2. Terrain & Topography',unit:'m',min:0,max:4000,better:'high'},
+  {k:'temp',label:'3. Temp & Illumination Extremes',unit:'°C',min:-70,max:40,better:'low'},
+  {k:'swing',label:'3b. Diurnal Thermal Swing',unit:'°C',min:0,max:40,better:'high',get:s=>(s.hourlyTemp||[]).length>1?Math.max(...s.hourlyTemp)-Math.min(...s.hourlyTemp):NaN},
+  {k:'humidity',label:'4. Water, Ice & Aridity',unit:'%',min:0,max:100,better:'low'},
+  {k:'wind',label:'5. Dust & Aeolian Processes',unit:'km/h',min:0,max:80,better:'high'},
+  {k:'pressure',label:'5b. Thin-Atmosphere Proxy (hPa)',unit:'hPa',min:500,max:1013,better:'low'},
+  {k:'popDensity',label:'6. Biology, Extremophiles & Isolation',unit:'/km²',min:0,max:100,better:'low'},
+  {k:'subsurface',label:'7. Caves, Lava Tubes & Subsurface',unit:'%',min:0,max:100,better:'high',get:s=>s.terrainType==='Lava Tube & Cave'?100:(s.terrainType==='Polar & Permafrost'?75:40)},
+  {k:'ops',label:'8. Robotic & Human Operations',unit:'%',min:0,max:100,better:'high',get:s=>{const p=parseFloat(s.popDensity);const e=parseFloat(s.elevation);if(isNaN(p)&&isNaN(e))return NaN;return Math.max(20,Math.min(100,90-(isNaN(p)?0:Math.min(50,p*2))-(!isNaN(e)&&e>3500?15:0)))}}
+];
+const LS=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch{return d}};
+const setLS=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch{}};
+let customCrit=[],customMaps=[],sel=LS('nasa_sel',['humidity','terrain','elevation']);
+const allCrit=()=>[...CRITERIA,...customCrit];
+
+const val=(c,s)=>c.get?c.get(s):parseFloat(s[c.k]);
+const norm=(c,v)=>{if(isNaN(v))return NaN;
+  const t=Math.min(1,Math.max(0,(v-c.min)/(c.max-c.min)));return Math.round((c.better==='low'?1-t:t)*100)};
+const tier=t=>isNaN(t)?'var(--mu)':t>=70?'var(--ok)':t>=40?'var(--warn)':'var(--bad)';
+function rate(s){
+  const rows=sel.map(k=>allCrit().find(c=>c.k===k)).map(c=>{const v=val(c,s);return{c,v,n:norm(c,v)}});
+  const ok=rows.length===3&&rows.every(r=>!isNaN(r.n));
+  return{rows,total:ok?Math.round(rows.reduce((a,r)=>a+r.n,0)/3):NaN}}
+
+function renderCrit(){
+  $('critChips').innerHTML=allCrit().map(c=>`<button type="button" class="chip ${sel.includes(c.k)?'on':sel.length>=3?'off':''}" data-k="${c.k}" title="${c.better==='low'?'Lower':'Higher'} is better · ${c.min}–${c.max} ${esc(c.unit)}">${esc(c.label)}</button>`).join('');
+  $('critCount').textContent=`${sel.length}/3 selected`;
+  renderRank();drawPins()}
+$('critChips').onclick=e=>{const k=e.target.dataset.k;if(!k)return;
+  if(sel.includes(k))sel=sel.filter(x=>x!==k);
+  else if(sel.length<3)sel.push(k);
+  else return notice('Only 3 criteria','Unselect one criterion first, then pick another.');
+  setLS('nasa_sel',sel);renderCrit()};
+
+function renderRank(){
+  const sites=cat.map((s,i)=>({s,i,r:rate(s)})).filter(({s})=>catFilter==='all'||s.target===catFilter)
+    .sort((a,b)=>(isNaN(b.r.total)?-1:b.r.total)-(isNaN(a.r.total)?-1:a.r.total));
+  const head=sel.map(k=>allCrit().find(c=>c.k===k));
+  $('rank').innerHTML=`<tr><th>#</th><th>Site</th>${head.map(c=>`<th>${esc(c.label)} (${esc(c.unit)})</th>`).join('')}<th>Total</th></tr>`+
+    sites.map(({s,i,r},n)=>`<tr data-i="${i}" style="cursor:pointer"><td>${isNaN(r.total)?'–':n+1}</td>
+      <td>${esc(s.locationName)} <small style="color:${col(s.target)}">${s.target}</small></td>
+      ${r.rows.map(x=>`<td>${isNaN(x.v)?'<span style="color:var(--mu)">no data</span>':`${+x.v.toFixed(1)} <small style="color:${tier(x.n)}">${x.n}</small>`}</td>`).join('')}
+      <td><b style="color:${tier(r.total)}">${isNaN(r.total)?'–':r.total+'%'}</b></td></tr>`).join('')}
+$('rank').onclick=e=>{const tr=e.target.closest('tr[data-i]');if(!tr)return;
+  const s=cat[tr.dataset.i];if(hasCoord(s))map.flyTo([+s.latitude,+s.longitude],6)};
+
+function drawPins(){
+  pins.clearLayers();
+  cat.filter(hasCoord).forEach(s=>{
+    const c=col(s.target),r=rate(s),t=r.total;
+    const badge=isNaN(t)?'':`<b style="position:absolute;left:17px;top:-4px;padding:0 5px;border-radius:4px;background:#0b0f14d9;font:600 11px 'IBM Plex Mono',monospace;color:${tier(t)}">${t}</b>`;
+    const lines=r.rows.map(x=>`${esc(x.c.label)}: ${isNaN(x.v)?'no data':+x.v.toFixed(1)+' '+esc(x.c.unit)}`).join('<br>');
+    L.marker([+s.latitude,+s.longitude],{icon:L.divIcon({className:'',html:`<div style="position:relative"><div class="pin" style="--c:${c}"></div>${badge}</div>`,iconSize:[14,14]})}).addTo(pins)
+     .bindPopup(`<strong>${esc(s.locationName)}</strong><br><span style="color:${c}">${s.target}</span> · ${esc(s.terrainType)}<br>${lines}${isNaN(t)?'':`<br><b>Total: ${t}%</b>`}`)})}
+
+const MAP_LAYERS={
+  satellite:{url:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',attr:'NASA Space Apps | Esri Satellite'},
+  topo:{url:'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',attr:'NASA Space Apps | OpenTopoMap'},
+  light:{url:'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',attr:'NASA Space Apps | © OpenStreetMap © CARTO',sub:'abcd'}
+};
+map=L.map('map',{center:[20,0],zoom:2,minZoom:1,maxZoom:16});
+let curTile=L.tileLayer(MAP_LAYERS.satellite.url,{attribution:MAP_LAYERS.satellite.attr,subdomains:'abcd'}).addTo(map);
+const pins=L.layerGroup().addTo(map),overlays={};
+
+map.on('click', e => {
+  fetchGlobalSiteData({ lat: e.latlng.lat, lng: e.latlng.lng });
+});
+
+const isOverlay=id=>customMaps.some(m=>m.id===id&&m.overlay);
+function addMapButtons(){
+  document.querySelectorAll('#mapStyles [data-custom]').forEach(b=>b.remove());
+  $('mapStyles').insertAdjacentHTML('beforeend',customMaps.map(m=>`<button type="button" data-style="${m.id}" data-custom="1" class="${overlays[m.id]?'active':''}">${esc(m.name)}${m.overlay?' +':''}</button>`).join(''))}
+$('mapStyles').onclick=e=>{
+  const st=e.target.dataset.style;if(!st)return;
+  const wf=$('windyFrame'),mp=$('map'),m=customMaps.find(x=>x.id===st);
+  if(st!=='windy'){wf.hidden=true;mp.hidden=false;setTimeout(()=>map.invalidateSize(),50)}
+  if(m&&m.overlay){
+    if(overlays[st]){map.removeLayer(overlays[st]);delete overlays[st]}
+    else overlays[st]=L.tileLayer(m.url,{opacity:.65,maxNativeZoom:m.zoom,attribution:esc(m.name)}).addTo(map);
+    e.target.classList.toggle('active',!!overlays[st]);return}
+  [...$('mapStyles').children].filter(b=>!isOverlay(b.dataset.style)).forEach(b=>b.classList.toggle('active',b.dataset.style===st));
+  if(st==='windy'){
+    mp.hidden=true;wf.hidden=false;
+    wf.src=wxMapUrl(parseFloat(lat.value)||-24.0833,parseFloat(lng.value)||-69.9167);return}
+  const ly=MAP_LAYERS[st]||m;if(!ly)return;
+  mp.dataset.style=st;
+  map.removeLayer(curTile);
+  curTile=L.tileLayer(ly.url,{attribution:ly.attr||esc(ly.name),subdomains:ly.sub||'abc',maxNativeZoom:ly.zoom||18}).addTo(map);
+  curTile.bringToBack()};
+keyUI();
+showTelemetry({
+  humidity: P.atacama.humidity,
+  temp: P.atacama.temp,
+  wind: P.atacama.wind,
+  windDir: P.atacama.windDir,
+  pressure: P.atacama.pressure,
+  elevation: P.atacama.elevation,
+  hourlyTemp: P.atacama.hourlyTemp,
+  hourlyWind: P.atacama.hourlyWind
+}, P.atacama.locationName);
+load();
+</script>
+</body>
+</html>
