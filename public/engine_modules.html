@@ -314,7 +314,7 @@
   <div class="db-sync-bar">
     <div>
       <strong>🔗 Linked Web Dataset:</strong>
-      <span id="dbSyncStatus" style="color: var(--text-muted);">Checking database records (sites &amp; data_types) and built-in Planetary Dataset...</span>
+      <span id="dbSyncStatus" style="color: var(--text-muted);">Checking database records (moon_base_sites, mars_outpost_sites &amp; data_types) and built-in Planetary Dataset...</span>
     </div>
     <div class="db-sync-controls">
       <select id="savedSiteSelect" class="site-select">
@@ -877,7 +877,7 @@
     const selectEl = document.getElementById('savedSiteSelect');
 
     try {
-      const res = await fetch('compare_api.php');
+      const res = await fetch('api/compare');
       const data = await res.json();
       if (data.ok && data.sites) {
         ['Moon', 'Mars'].forEach(planet => {

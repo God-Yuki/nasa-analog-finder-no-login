@@ -844,13 +844,13 @@ const cf=$('cf'),siteName=$('siteName'),country=$('country'),lat=$('lat'),lng=$(
       previewBox=$('previewBox'),pBody=$('pBody'),pTerr=$('pTerr'),pName=$('pName'),
       pMeta=$('pMeta'),pArc=$('pArc'),pScore=$('pScore'),msgDlg=$('msgDlg'),msgT=$('msgT'),msgB=$('msgB');
 
-// ===== Kết nối PHP backend =====
-// PHP chạy ở cổng 8000 (php -S 127.0.0.1:8000).
+// ===== Kết nối Node.js backend =====
+// Node.js server (chạy local: npm start) phục vụ cả web lẫn API nên dùng đường dẫn tương đối.
 const HOST='';
-const API={sites:HOST+'contribute.php'};   // contribute.php <-> database `contribute`
+const API={sites:HOST+'api/contribute'};   // api/contribute <-> bảng moon_base_sites, mars_outpost_sites, contributions (database `railway`)
 async function api(url,opt){
   const r=await fetch(url,{headers:{'Content-Type':'application/json'},...opt});
-  const d=await r.json().catch(()=>({error:`PHP did not answer correctly (HTTP ${r.status}). Is the PHP server running on port 8000?`}));
+  const d=await r.json().catch(()=>({error:`The server did not answer correctly (HTTP ${r.status}). Is the Node.js server running?`}));
   if(!r.ok)throw new Error(d.error||`Request failed (${r.status})`);
   return d;
 }
@@ -882,7 +882,7 @@ const NUMK=['latitude','longitude','humidity','popDensity','temp','wind','windDi
 const fromServer=x=>{NUMK.forEach(k=>{if(x[k]===null||x[k]===undefined)x[k]=NaN});return x};
 const sameName=(a,b)=>(a.locationName||'').trim().toLowerCase()===(b.locationName||'').trim().toLowerCase();
 
-// Tải từ database `contribute` (view all_sites = moon base + mars outpost + địa điểm đã đóng góp)
+// Tải từ database `railway` (moon_base_sites + mars_outpost_sites + contributions)
 async function load(){
   const d=await api(API.sites);
   const mine=d.sites.map(fromServer);
@@ -967,7 +967,7 @@ cf.onsubmit=async e=>{
   submitBtn.disabled=true;
   let entry;
   try{
-    // Gửi dữ liệu form sang contribute.php -> PHP ghi vào bảng contributions của database `contribute`
+    // Gửi dữ liệu form sang api/contribute -> server Node.js ghi vào bảng `contributions` của database `railway`
     const d=await api(API.sites,{method:'POST',body:JSON.stringify({
       target:cf.t.value,
       siteName:siteName.value.trim(),
@@ -1008,7 +1008,7 @@ cf.onsubmit=async e=>{
   setTimeout(()=>pArc.style.strokeDashoffset=201-201*entry.score/100,50);
 
   msgT.textContent='Site added to catalog!';
-  msgB.textContent=`"${entry.locationName}" (${entry.score}% match) has been saved to the contribute database (${entry.target==='Moon'?'moon base':'mars outpost'}).`;
+  msgB.textContent=`"${entry.locationName}" (${entry.score}% match) has been saved to the database (${entry.target==='Moon'?'moon base':'mars outpost'}).`;
   msgDlg.showModal();
 
   siteName.value='';

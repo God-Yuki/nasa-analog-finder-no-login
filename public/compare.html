@@ -1531,7 +1531,7 @@
       marsMap.on('click', (e) => selectLocation('Mars', e.latlng.lat, e.latlng.lng));
 
       // Load Moon & Mars sites from MySQL DB
-      fetch('compare_api.php')
+      fetch('api/compare')
         .then(r => r.json())
         .then(data => {
           if (!data.ok || !data.sites) return;
